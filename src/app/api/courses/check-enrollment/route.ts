@@ -24,7 +24,7 @@ export async function GET(request: NextRequest) {
     }
 
     const userId = parseInt(session.user.id);
-    const token = session.user.moodleToken;
+    const token = (session.user as any)?.token;
 
     if (!token) {
       return NextResponse.json(
