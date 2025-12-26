@@ -83,7 +83,7 @@ export default function CoursesPage() {
       id: course.id,
       fullname: course.fullname,
       price: course.price,
-      imageUrl: course.courseimage,
+      imageUrl: (course as any)?.courseimage,
       categoryName: course.categoryName,
     });
   };
@@ -189,9 +189,9 @@ export default function CoursesPage() {
                   >
                     {/* Course Image */}
                     <div className="relative h-48 bg-gradient-to-br from-blue-600 to-purple-600 overflow-hidden">
-                      {course.courseimage && (
+                      {(course as any)?.courseimage && (
                         <img
-                          src={course.courseimage}
+                          src={(course as any).courseimage}
                           alt={course.fullname}
                           className="w-full h-full object-cover"
                         />

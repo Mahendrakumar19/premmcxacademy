@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, Suspense } from 'react';
 import { useSession } from 'next-auth/react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import Navbar from '@/components/Navbar';
@@ -18,7 +18,7 @@ interface Course {
   lastaccess?: number;
 }
 
-export default function MyCoursesPage() {
+function MyCoursesContent() {
   const { data: session, status } = useSession();
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -47,8 +47,8 @@ export default function MyCoursesPage() {
   const loadCourses = async () => {
     try {
       setLoading(true);
-      const userId = session?.user?.moodleId || session?.user?.id;
-      const token = session?.user?.moodleToken || session?.user?.token;
+      const userId = parseInt(session?.user?.id || '0');
+      const token = (session?.user as any)?.token;
 
       if (!userId || !token) {
         console.error('Missing user ID or token');
@@ -174,5 +174,23 @@ export default function MyCoursesPage() {
         )}
       </main>
     </div>
+  );
+}
+
+export default function MyCoursesPage() {
+  return (
+    <Suspense fallback={
+      <div className="min-h-screen bg-gray-50">
+        <Navbar />
+        <div className="flex items-center justify-center h-96">
+          <div className="text-center">
+            <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-orange-500 mx-auto mb-4"></div>
+            <p className="text-gray-600">Loading your courses...</p>
+          </div>
+        </div>
+      </div>
+    }>
+      <MyCoursesContent />
+    </Suspense>
   );
 }

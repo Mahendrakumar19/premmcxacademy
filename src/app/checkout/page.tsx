@@ -46,7 +46,7 @@ export default function CheckoutPage() {
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
             courseId: item.id,
-            userId: session?.user?.moodleId || session?.user?.id,
+            userId: session?.user?.id,
           }),
         });
 
@@ -113,7 +113,7 @@ export default function CheckoutPage() {
                 paymentId: response.razorpay_payment_id,
                 signature: response.razorpay_signature,
                 courseIds: items.map((i) => i.id),
-                userId: session?.user?.moodleId || session?.user?.id,
+                userId: session?.user?.id,
               }),
             });
 
