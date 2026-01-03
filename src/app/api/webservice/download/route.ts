@@ -56,7 +56,6 @@ export async function GET(req: Request) {
       headers: {
         'User-Agent': 'LMS-Liquid-Glass/1.0',
       },
-      timeout: 30000,
     });
 
     if (!response.ok) {

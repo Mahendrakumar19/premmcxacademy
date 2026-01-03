@@ -171,7 +171,6 @@ export async function getAllCoursesWithEnrolment(token?: string) {
       // Extract course image
       const courseimage = null;
       if (course.overviewfiles && Array.isArray(course.overviewfiles) && course.overviewfiles.length > 0) {
-        // @ts-expect-error overviewfiles shape depends on Moodle response
         return { ...course, cost, currency, requiresPayment, displayPrice, courseimage: normalizePluginfileUrl(course.overviewfiles[0].fileurl) };
       } else if (course.courseimage) {
         return { ...course, cost, currency, requiresPayment, displayPrice, courseimage: normalizePluginfileUrl(course.courseimage) };
