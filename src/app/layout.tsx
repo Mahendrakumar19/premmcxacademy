@@ -3,6 +3,7 @@ import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
 import SessionProvider from "@/components/SessionProvider";
 import { CartProvider } from "@/context/CartContext";
+import Footer from "@/components/Footer";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -15,8 +16,8 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "Prem MCX LMS - Modern Moodle Integration",
-  description: "A beautiful, modern LMS powered by Moodle with a stunning Liquid Glass theme",
+  title: "PremMCX Training Academy - Master MCX Trading",
+  description: "India's premier MCX trading academy. Learn commodity trading from expert traders with live sessions, practical strategies, and comprehensive courses.",
 };
 
 export default function RootLayout({
@@ -30,7 +31,10 @@ export default function RootLayout({
         className={`${geistSans.variable} ${geistMono.variable} font-sans antialiased`}
       >
         <CartProvider>
-          <SessionProvider>{children}</SessionProvider>
+          <SessionProvider>
+            {children}
+            <Footer />
+          </SessionProvider>
         </CartProvider>
       </body>
     </html>

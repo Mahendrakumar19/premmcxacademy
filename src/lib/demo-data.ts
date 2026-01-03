@@ -1,6 +1,7 @@
 // Mock/Demo data for Prem MCX Trading Academy - eCommerce Version
 import type { MoodleCourse, MoodleSiteInfo } from '@/types/moodle';
 
+
 export const demoSiteInfo: MoodleSiteInfo = {
   sitename: 'Prem MCX Trading Academy',
   username: 'trader',

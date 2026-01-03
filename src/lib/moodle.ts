@@ -5,6 +5,9 @@ import type {
   MoodleApiError,
   MoodleGrade,
   MoodleUser,
+  MoodleUserRole,
+  MoodleCapability,
+  MoodleEnrolmentInstance,
 } from '@/types/moodle';
 
 /**
@@ -16,7 +19,7 @@ export async function callMoodle<T = unknown>(
   token?: string
 ): Promise<T> {
   const base = process.env.MOODLE_URL;
-  const wstoken = token || process.env.MOODLE_TOKEN;
+  const wstoken = token || process.env.MOODLE_TOKEN || process.env.MOODLE_PAYMENT_TOKEN;
 
   if (!base || !wstoken) {
     throw new Error('MOODLE_URL and MOODLE_TOKEN must be set in environment');
@@ -150,4 +153,178 @@ export async function searchCourses(
     },
     token
   );
+}
+/**
+ * Get user roles in a specific context (site, course, etc.)
+ */
+export async function getUserRoles(
+  userid: number,
+  token?: string
+): Promise<MoodleUserRole[]> {
+  try {
+    const result = await callMoodle<{ roles: MoodleUserRole[] }>(
+      'core_role_get_user_roles',
+      { userid },
+      token
+    );
+    return result?.roles || [];
+  } catch (error) {
+    console.error('Error fetching user roles:', error);
+    return [];
+  }
+}
+
+/**
+ * Get user capabilities
+ */
+export async function getUserCapabilities(
+  capabilities: string[],
+  token?: string
+): Promise<MoodleCapability[]> {
+  try {
+    const result = await callMoodle<{ capabilities: MoodleCapability[] }>(
+      'core_user_get_user_capabilities',
+      { capabilities },
+      token
+    );
+    return result?.capabilities || [];
+  } catch (error) {
+    console.error('Error fetching user capabilities:', error);
+    return [];
+  }
+}
+
+/**
+ * Get enrolment instances for a course (includes payment info)
+ */
+export async function getCourseEnrolmentInstances(
+  courseid: number,
+  token?: string
+): Promise<MoodleEnrolmentInstance[]> {
+  try {
+    return await callMoodle<MoodleEnrolmentInstance[]>(
+      'core_enrol_get_course_enrolment_methods',
+      { courseid },
+      token
+    );
+  } catch (error) {
+    console.error('Error fetching enrolment instances:', error);
+    return [];
+  }
+}
+
+/**
+ * Get all courses with enrolment information including pricing
+ */
+export async function getCoursesWithEnrolmentInfo(
+  token?: string
+): Promise<MoodleCourse[]> {
+  try {
+    const courses = await callMoodle<MoodleCourse[]>(
+      'core_course_get_courses',
+      {},
+      token
+    );
+
+    // Filter out hidden courses (visible === 0)
+    const visibleCourses = courses.filter((course) => course.visible !== 0);
+
+    // Fetch enrolment info for each visible course to get pricing
+    const coursesWithPricing = await Promise.all(
+      visibleCourses.map(async (course) => {
+        try {
+          const enrolments = await getCourseEnrolmentInstances(course.id, token);
+          const feeEnrolment = enrolments.find((e) => e.enrol === 'fee' && e.cost);
+
+          if (feeEnrolment) {
+            return {
+              ...course,
+              cost: feeEnrolment.cost,
+              currency: feeEnrolment.currency || 'INR',
+            };
+          }
+        } catch (err) {
+          console.error(`Error fetching enrolment for course ${course.id}:`, err);
+        }
+        return course;
+      })
+    );
+
+    return coursesWithPricing;
+  } catch (error) {
+    console.error('Error fetching courses with enrolment info:', error);
+    throw error;
+  }
+}
+
+/**
+ * Check if user is enrolled in a course
+ */
+export async function checkUserEnrollment(
+  userid: number,
+  courseid: number,
+  token?: string
+): Promise<boolean> {
+  try {
+    const courses = await getUserCourses(userid, token);
+    return courses.some((course) => course.id === courseid);
+  } catch (error) {
+    console.error('Error checking enrollment:', error);
+    return false;
+  }
+}
+
+/**
+ * Get user's highest role (for access control)
+ */
+export async function getUserHighestRole(
+  userid: number,
+  token?: string
+): Promise<'admin' | 'teacher' | 'student'> {
+  try {
+    console.log('🔍 Fetching roles for user:', userid);
+    
+    // First, get site info to check if user is site admin
+    const siteInfo = await getSiteInfo(token);
+    console.log('📋 Site info user functions:', siteInfo.functions);
+    
+    // Get user roles
+    const roles = await getUserRoles(userid, token);
+    console.log('📋 User roles:', JSON.stringify(roles, null, 2));
+    
+    // Check if user has course creation capabilities (indicates admin/course creator)
+    const hasCreateCourseCapability = siteInfo.functions?.some(
+      (func: { name: string }) => 
+        func.name === 'core_course_create_courses' ||
+        func.name === 'core_course_update_courses' ||
+        func.name === 'core_course_delete_courses'
+    );
+    
+    console.log('🔑 Has course creation capability:', hasCreateCourseCapability);
+    
+    // If user has course creation capabilities, they're an admin
+    if (hasCreateCourseCapability) {
+      console.log('✅ User is ADMIN (has course creation capabilities)');
+      return 'admin';
+    }
+    
+    // Check for admin/manager roles
+    if (roles.some((r) => ['admin', 'manager', 'coursecreator'].includes(r.shortname.toLowerCase()))) {
+      console.log('✅ User is ADMIN (role-based)');
+      return 'admin';
+    }
+    
+    // Check for teacher/editing teacher roles
+    if (roles.some((r) => ['teacher', 'editingteacher'].includes(r.shortname.toLowerCase()))) {
+      console.log('✅ User is TEACHER');
+      return 'teacher';
+    }
+    
+    // Default to student
+    console.log('✅ User is STUDENT');
+    return 'student';
+  } catch (error) {
+    console.error('❌ Error getting highest role:', error);
+    return 'student';
+  }
 }

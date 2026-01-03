@@ -6,17 +6,19 @@ import { useSession } from 'next-auth/react';
 import Navbar from '@/components/Navbar';
 import { useCart } from '@/context/CartContext';
 import Link from 'next/link';
+import { paymentService } from '@/lib/payment-service';
 
 export default function CartPage() {
   const router = useRouter();
   const { data: session } = useSession();
   const { items, removeFromCart, clearCart, getTotalPrice, getItemCount } = useCart();
-  const [loading, setLoading] = React.useState(false);
+  const [loading] = React.useState(false);
 
   const totalPrice = getTotalPrice();
-  const itemCount = getItemCount();
-  const hasFreeCourses = items.some((item) => item.price === 0);
-  const hasPaidCourses = items.some((item) => item.price > 0);
+  const itemCount: number = getItemCount();
+  const isEmptyCart = itemCount === 0;
+  const hasFreeCourses = items.some((item) => !item.cost || parseFloat(item.cost) === 0);
+  const hasPaidCourses = items.some((item) => parseFloat(item.cost || '0') > 0);
 
   const handleProceedToCheckout = async () => {
     if (!session?.user) {
@@ -26,6 +28,34 @@ export default function CartPage() {
     }
 
     router.push('/checkout');
+  };
+
+  const handleDirectMoodlePayment = async (courseId: number) => {
+    try {
+      // Find the course in cart to get price details
+      const course = items.find(item => item.courseId === courseId);
+      
+      if (!course) {
+        alert('Course not found in cart');
+        return;
+      }
+      
+      // Process direct payment using the payment service
+      const result = await paymentService.processDirectPayment({
+        courseId: course.courseId,
+        amount: parseFloat(course.cost) * 100, // Convert to paise
+        currency: course.currency
+      });
+      
+      // If payment service indicates user is not authenticated, handle it
+      if (!result.success && result.message === 'User not authenticated') {
+        // The payment service already redirects to login, so we don't need to do anything else
+        return;
+      }
+    } catch (error) {
+      console.error('Error processing payment:', error);
+      alert('An error occurred while processing your payment. Please try again.');
+    }
   };
 
   const handleClearCart = () => {
@@ -75,25 +105,28 @@ export default function CartPage() {
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
             {/* Cart Items */}
             <div className="lg:col-span-2">
-              <div className="bg-white border border-gray-200 rounded-lg overflow-hidden">
+              <div className="bg-white border border-gray-200 rounded-2xl overflow-hidden shadow-sm">
                 {/* Cart Items List */}
                 {items.map((item, index) => (
-                  <div key={item.id} className={`p-6 ${index !== items.length - 1 ? 'border-b border-gray-200' : ''}`}>
+                  <div 
+                    key={item.courseId} 
+                    className={`p-6 transition-all duration-300 hover:bg-gray-50 ${index !== items.length - 1 ? 'border-b border-gray-100' : ''}`}
+                  >
                     <div className="flex items-start justify-between gap-4">
                       <div className="flex-1">
-                        <h3 className="text-lg font-bold text-gray-900 mb-1">{item.fullname}</h3>
-                        <p className="text-sm text-gray-600 mb-3">{item.categoryName || 'Course'}</p>
+                        <h3 className="text-lg font-semibold text-gray-900 mb-1 transition-colors duration-200">{item.courseName}</h3>
+                        <p className="text-sm text-gray-500 mb-3">Course</p>
                         <div className="flex items-center gap-4">
-                          <span className="text-2xl font-bold text-green-400">
-                            {item.price > 0 ? `₹${item.price.toLocaleString()}` : 'FREE'}
+                          <span className="text-2xl font-bold text-gray-900">
+                            {parseFloat(item.cost || '0') > 0 ? `₹${parseFloat(item.cost).toLocaleString()}` : <span className="text-green-600 font-semibold">FREE</span>}
                           </span>
-                          {item.price === 0 && <span className="text-xs bg-green-600 text-white px-3 py-1 rounded-full">No payment needed</span>}
+                          {(!item.cost || parseFloat(item.cost) === 0) && <span className="text-xs bg-green-100 text-green-800 px-3 py-1 rounded-full font-medium">No payment needed</span>}
                         </div>
                       </div>
 
                       <button
-                        onClick={() => removeFromCart(item.id)}
-                        className="p-2 text-gray-400 hover:text-red-400 transition-colors duration-200"
+                        onClick={() => removeFromCart(item.courseId)}
+                        className="p-2 text-gray-400 hover:text-red-500 transition-all duration-200 rounded-lg hover:bg-red-50"
                         title="Remove from cart"
                       >
                         <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -104,8 +137,8 @@ export default function CartPage() {
 
                     {/* Quick View Link */}
                     <Link
-                      href={`/courses/${item.id}`}
-                      className="mt-3 inline-block text-blue-400 hover:text-blue-300 text-sm transition-colors duration-200"
+                      href={`/courses/${item.courseId}`}
+                      className="mt-3 inline-block text-indigo-600 hover:text-indigo-700 text-sm font-medium transition-colors duration-200"
                     >
                       View Course Details →
                     </Link>
@@ -113,30 +146,30 @@ export default function CartPage() {
                 ))}
 
                 {/* Clear Cart Button */}
-                <div className="px-6 py-4 border-t border-gray-200 flex justify-between items-center">
+                <div className="px-6 py-4 border-t border-gray-100 flex justify-between items-center bg-gray-50">
                   <button
                     onClick={handleClearCart}
-                    className="text-sm text-red-600 hover:text-red-500 transition-colors duration-200"
+                    className="text-sm text-red-600 hover:text-red-700 font-medium transition-colors duration-200"
                   >
                     Clear Cart
                   </button>
-                  <span className="text-sm text-gray-600">{itemCount} item{itemCount !== 1 ? 's' : ''}</span>
+                  <span className="text-sm text-gray-600 font-medium">{itemCount} item{itemCount !== 1 ? 's' : ''}</span>
                 </div>
               </div>
             </div>
 
             {/* Summary */}
             <div className="lg:col-span-1">
-              <div className="bg-white border border-gray-200 rounded-lg p-6 sticky top-6">
+              <div className="bg-white border border-gray-200 rounded-2xl p-6 sticky top-6 shadow-sm">
                 <h2 className="text-2xl font-bold text-gray-900 mb-6">Order Summary</h2>
 
                 {/* Pricing Breakdown */}
-                <div className="space-y-3 mb-6 pb-6 border-b border-gray-200">
+                <div className="space-y-3 mb-6 pb-6 border-b border-gray-100">
                   {items.map((item) => (
-                    <div key={item.id} className="flex justify-between text-sm">
-                      <span className="text-gray-600 line-clamp-1">{item.fullname}</span>
-                      <span className="text-gray-900 font-medium">
-                        {item.price > 0 ? `₹${item.price.toLocaleString()}` : 'FREE'}
+                    <div key={item.courseId} className="flex justify-between text-sm transition-all duration-200">
+                      <span className="text-gray-600 line-clamp-1 font-medium">{item.courseName}</span>
+                      <span className="text-gray-900 font-semibold">
+                        {parseFloat(item.cost || '0') > 0 ? `₹${parseFloat(item.cost).toLocaleString()}` : <span className="text-green-600 font-semibold">FREE</span>}
                       </span>
                     </div>
                   ))}
@@ -145,16 +178,16 @@ export default function CartPage() {
                 {/* Total */}
                 <div className="mb-6">
                   <div className="flex justify-between mb-2">
-                    <span className="text-gray-600">Subtotal:</span>
-                    <span className="text-gray-900">₹{totalPrice.toLocaleString()}</span>
+                    <span className="text-gray-600 font-medium">Subtotal:</span>
+                    <span className="text-gray-900 font-semibold">₹{totalPrice.toLocaleString()}</span>
                   </div>
                   <div className="flex justify-between mb-4">
-                    <span className="text-gray-600">Tax (0%):</span>
-                    <span className="text-gray-900">₹0</span>
+                    <span className="text-gray-600 font-medium">Tax (0%):</span>
+                    <span className="text-gray-900 font-semibold">₹0</span>
                   </div>
-                  <div className="flex justify-between text-xl font-bold border-t border-gray-200 pt-4">
-                    <span className="text-gray-900">Total:</span>
-                    <span className="text-green-400">₹{totalPrice.toLocaleString()}</span>
+                  <div className="flex justify-between text-xl font-bold border-t border-gray-100 pt-4">
+                    <span className="text-gray-900 font-semibold">Total:</span>
+                    <span className="text-indigo-600 font-bold">₹{totalPrice.toLocaleString()}</span>
                   </div>
                 </div>
 
@@ -172,17 +205,32 @@ export default function CartPage() {
                 )}
 
                 {/* Checkout Button */}
-                <button
-                  onClick={handleProceedToCheckout}
-                  disabled={itemCount === 0}
-                  className={`w-full px-6 py-3 rounded-lg font-bold text-white transition-colors duration-200 ${
-                    itemCount === 0
-                      ? 'bg-gray-600 cursor-not-allowed'
-                      : 'bg-blue-600 hover:bg-blue-700'
-                  }`}
-                >
-                  {session?.user ? 'Proceed to Checkout' : 'Login & Checkout'}
-                </button>
+                {itemCount === 1 && hasPaidCourses && !hasFreeCourses ? (
+                  // For single paid course, offer direct Moodle payment option
+                  <button
+                    onClick={() => handleDirectMoodlePayment(items[0].courseId)}
+                    disabled={isEmptyCart}
+                    className={`w-full px-6 py-4 rounded-xl font-bold text-white transition-all duration-300 transform hover:scale-[1.02] active:scale-[0.98] ${
+                      isEmptyCart
+                        ? 'bg-gray-400 cursor-not-allowed'
+                        : 'bg-gradient-to-r from-orange-500 to-red-500 hover:from-orange-600 hover:to-red-600 shadow-lg hover:shadow-xl'
+                    }`}
+                  >
+                    {session?.user ? 'Pay & Enroll Now' : 'Login & Pay Now'}
+                  </button>
+                ) : (
+                  <button
+                    onClick={handleProceedToCheckout}
+                    disabled={isEmptyCart}
+                    className={`w-full px-6 py-4 rounded-xl font-bold text-white transition-all duration-300 transform hover:scale-[1.02] active:scale-[0.98] ${
+                      isEmptyCart
+                        ? 'bg-gray-400 cursor-not-allowed'
+                        : 'bg-indigo-600 hover:bg-indigo-700 shadow-lg hover:shadow-xl'
+                    }`}
+                  >
+                    {session?.user ? 'Proceed to Checkout' : 'Login & Checkout'}
+                  </button>
+                )}
 
                 {/* Continue Shopping */}
                 <Link

@@ -14,6 +14,27 @@ export interface MoodleSiteInfo {
   uploadfiles?: number;
   release?: string;
   version?: string;
+  userprivileges?: {
+    canmanagecourses?: boolean;
+    canviewallcourses?: boolean;
+    canmanagetags?: boolean;
+  };
+}
+
+// Moodle user roles
+export type MoodleRole = 'admin' | 'teacher' | 'student' | 'editingteacher' | 'manager';
+
+export interface MoodleUserRole {
+  roleid: number;
+  shortname: MoodleRole;
+  name: string;
+  archetype?: string;
+}
+
+export interface MoodleCapability {
+  name: string;
+  capabilityname: string;
+  value: number; // 1 = allowed, 0 = not set, -1000 = prohibited
 }
 
 export interface MoodleCourse {
@@ -34,16 +55,9 @@ export interface MoodleCourse {
   progress?: number;
   startdate?: number;
   enddate?: number;
-  // eCommerce fields
-  price?: number;
-  originalPrice?: number;
-  discountPercent?: number;
-  courseType?: 'LIVE CLASS' | 'RECORDED' | 'VIDEOS' | 'FILES' | 'MENTORSHIP' | 'FREE CONTENT';
-  categoryName?: 'Basic' | 'Advanced' | 'Scalping' | 'Options Trading' | 'Intraday' | 'Risk Management' | 'Technical Analysis';
-  isFeatured?: boolean;
-  isPopular?: boolean;
-  hasLimitedOffer?: boolean;
-  thumbnailUrl?: string;
+  cost?: string;
+  currency?: string;
+  courseimage?: string;
 }
 
 export interface MoodleCourseContent {
@@ -153,7 +167,41 @@ export interface MoodleApiResponse<T = unknown> {
   error?: string;
 }
 
-// eCommerce types
+// Payment gateway types from Moodle
+export interface MoodlePaymentAccount {
+  id: number;
+  name: string;
+  enabled: boolean;
+  archived: boolean;
+}
+
+export interface MoodlePaymentGateway {
+  name: string;
+  enabled: boolean;
+  config: {
+    apikey?: string;
+    brand_name?: string;
+  };
+}
+
+export interface MoodleEnrolmentInstance {
+  id: number;
+  courseid: number;
+  enrol: string;
+  status: number; // 0 = enabled, 1 = disabled
+  name?: string;
+  password?: string;
+  customint1?: number;
+  customint2?: number;
+  customint3?: number;
+  customchar1?: string;
+  customchar2?: string;
+  roleid: number;
+  cost?: string;
+  currency?: string;
+}
+
+// eCommerce types - deprecated, will use Moodle data
 export interface CartItem {
   courseId: number;
   courseName: string;

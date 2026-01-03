@@ -33,10 +33,13 @@ export default function PaymentHistoryPage() {
   const loadPaymentHistory = async () => {
     try {
       setLoading(true);
-      // Fetch from localStorage for now (in production, fetch from backend)
-      const storedPayments = localStorage.getItem(`payments_${session?.user?.id}`);
-      if (storedPayments) {
-        setPayments(JSON.parse(storedPayments));
+      // Fetch from backend API (real-time)
+      const res = await fetch('/api/payment/history');
+      if (res.ok) {
+        const json = await res.json();
+        setPayments(json.payments || []);
+      } else {
+        console.error('Failed to fetch payment history');
       }
     } catch (error) {
       console.error("Failed to load payment history:", error);

@@ -1,5 +1,6 @@
 import { NextAuthOptions } from "next-auth";
 import CredentialsProvider from "next-auth/providers/credentials";
+import { getUserHighestRole } from "./moodle";
 
 export const authOptions: NextAuthOptions = {
   providers: [
@@ -47,12 +48,24 @@ export const authOptions: NextAuthOptions = {
             const userData = await userResponse.json();
 
             if (userData.userid) {
+              // Hardcoded admin check - if username is "admin", assign admin role
+              let userRole: 'admin' | 'teacher' | 'student';
+              
+              if (credentials.username.toLowerCase() === 'admin') {
+                console.log('🔐 Hardcoded admin login detected');
+                userRole = 'admin';
+              } else {
+                // Fetch user's highest role from Moodle for other users
+                userRole = await getUserHighestRole(userData.userid, data.token);
+              }
+              
               return {
                 id: userData.userid.toString(),
                 name: userData.fullname,
                 email: userData.username,
                 image: userData.userpictureurl,
                 token: data.token,
+                role: userRole,
               };
             }
           }
@@ -70,6 +83,7 @@ export const authOptions: NextAuthOptions = {
       if (user) {
         token.id = user.id;
         token.token = user.token;
+        token.role = user.role;
       }
       return token;
     },
@@ -77,6 +91,7 @@ export const authOptions: NextAuthOptions = {
       if (session.user) {
         session.user.id = token.id as string;
         session.user.token = token.token as string;
+        session.user.role = token.role as 'admin' | 'teacher' | 'student';
       }
       return session;
     },

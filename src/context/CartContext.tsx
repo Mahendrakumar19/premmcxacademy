@@ -3,11 +3,11 @@
 import React, { createContext, useContext, useEffect, useState } from 'react';
 
 export interface CartItem {
-  id: number;
-  fullname: string;
-  price: number;
-  imageUrl?: string;
-  categoryName?: string;
+  courseId: number;
+  courseName: string;
+  cost: string;
+  currency: string;
+  thumbnailUrl?: string;
 }
 
 interface CartContextType {
@@ -49,7 +49,7 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
   const addToCart = (course: CartItem) => {
     setItems((prevItems) => {
       // Check if course already exists
-      if (prevItems.some((item) => item.id === course.id)) {
+      if (prevItems.some((item) => item.courseId === course.courseId)) {
         return prevItems;
       }
       return [...prevItems, course];
@@ -57,7 +57,7 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
   };
 
   const removeFromCart = (courseId: number) => {
-    setItems((prevItems) => prevItems.filter((item) => item.id !== courseId));
+    setItems((prevItems) => prevItems.filter((item) => item.courseId !== courseId));
   };
 
   const clearCart = () => {
@@ -65,7 +65,7 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
   };
 
   const getTotalPrice = () => {
-    return items.reduce((total, item) => total + item.price, 0);
+    return items.reduce((total, item) => total + (parseFloat(item.cost) || 0), 0);
   };
 
   const getItemCount = () => {
@@ -73,7 +73,7 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
   };
 
   const isInCart = (courseId: number) => {
-    return items.some((item) => item.id === courseId);
+    return items.some((item) => item.courseId === courseId);
   };
 
   const value: CartContextType = {
