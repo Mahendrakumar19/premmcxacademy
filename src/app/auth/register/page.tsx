@@ -2,9 +2,11 @@
 import React, { useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
+import { useCart } from "@/context/CartContext";
 
 export default function RegisterPage() {
   const router = useRouter();
+  const { addToCart } = useCart();
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [success, setSuccess] = useState(false);
@@ -54,8 +56,25 @@ export default function RegisterPage() {
 
       if (response.ok) {
         setSuccess(true);
+        
+        // Check if there's a pending cart item to add after signup
+        const pendingItem = sessionStorage.getItem('pendingAddToCart');
+        
         setTimeout(() => {
-          router.push("/auth/login?registered=true");
+          if (pendingItem) {
+            try {
+              const item = JSON.parse(pendingItem);
+              addToCart(item);
+              sessionStorage.removeItem('pendingAddToCart');
+              // Redirect to cart instead of login
+              router.push('/cart');
+            } catch (err) {
+              console.error('Error adding pending cart item:', err);
+              router.push("/auth/login?registered=true");
+            }
+          } else {
+            router.push("/auth/login?registered=true");
+          }
         }, 2000);
       } else {
         const errorData = data.error || "Registration failed. Please try again.";

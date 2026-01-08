@@ -131,6 +131,11 @@ export async function getAllCoursesWithEnrolment(token?: string) {
       console.error('❌ Moodle API did not return array:', courses);
       return [];
     }
+    
+    // Filter out site courses (format: 'site', id: 1) immediately
+    courses = courses.filter((course: any) => course.format !== 'site' && course.id !== 1);
+    
+    console.log('📚 After filtering site courses:', courses.length);
 
     if (courses.length > 0) {
       console.log('📊 Sample course data (first course):', JSON.stringify(courses[0], null, 2).substring(0, 500));
@@ -143,14 +148,29 @@ export async function getAllCoursesWithEnrolment(token?: string) {
       let requiresPayment = false;
       let displayPrice = null;
       
-      // Extract display price from custom field 'coursecost' if available in the response
+      // Extract display price from custom fields - support common shortnames: 'cost', 'coursecost'
       if (course.customfields && Array.isArray(course.customfields)) {
         const priceField = course.customfields.find(
-          (field: any) => field.shortname === 'coursecost' || field.name === 'Course Cost'
+          (field: any) => ['cost', 'coursecost'].includes(String(field.shortname).toLowerCase()) || String(field.name).toLowerCase().includes('course cost')
         );
-        if (priceField && priceField.value) {
-          displayPrice = priceField.value;
-          console.log(`💰 Found custom field price for course ${course.id} (${course.fullname}): ₹${displayPrice}`);
+        if (priceField && priceField.value !== undefined && priceField.value !== null) {
+          let priceVal = typeof priceField.value === 'object' ? priceField.value.text || String(priceField.value) : String(priceField.value);
+          // Strip HTML tags from custom field values
+          priceVal = priceVal.replace(/<[^>]*>/g, '').trim();
+          if (priceVal) displayPrice = priceVal;
+          console.log(`💰 Found custom field price for course ${course.id} (${course.fullname}): ${displayPrice}`);
+        }
+
+        // currency custom field
+        const currencyField = course.customfields.find(
+          (field: any) => ['currency'].includes(String(field.shortname).toLowerCase()) || String(field.name).toLowerCase().includes('currency')
+        );
+        if (currencyField && currencyField.value) {
+          let currencyVal = typeof currencyField.value === 'object' ? currencyField.value.text || String(currencyField.value) : String(currencyField.value);
+          // Strip HTML tags from custom field values
+          currencyVal = currencyVal.replace(/<[^>]*>/g, '').trim();
+          if (currencyVal) currency = currencyVal;
+          console.log(`💱 Found custom field currency for course ${course.id} (${course.fullname}): ${currency}`);
         }
       }
       
@@ -190,6 +210,72 @@ export async function getAllCoursesWithEnrolment(token?: string) {
   } catch (err) {
     console.error('Error fetching courses with enrollment:', err);
     return [];
+  }
+}
+
+// Get single course with enrollment/pricing info
+export async function getCourseWithEnrolment(courseId: number, token?: string) {
+  try {
+    // Get base course data
+    const course = await getCourseById(courseId, token);
+    
+    if (!course) {
+      return null;
+    }
+
+    let cost = null;
+    let currency = 'INR';
+    let requiresPayment = false;
+    let displayPrice = null;
+
+    // Extract display price from custom fields if available
+    if (course.customfields && Array.isArray(course.customfields)) {
+      const priceField = course.customfields.find(
+        (field: any) => ['cost', 'coursecost'].includes(String(field.shortname).toLowerCase()) || String(field.name).toLowerCase().includes('course cost')
+      );
+      if (priceField && priceField.value !== undefined && priceField.value !== null) {
+        let priceVal = typeof priceField.value === 'object' ? priceField.value.text || String(priceField.value) : String(priceField.value);
+        // Strip HTML tags from custom field values
+        priceVal = priceVal.replace(/<[^>]*>/g, '').trim();
+        if (priceVal) displayPrice = priceVal;
+        console.log(`💰 Found custom field price for course ${course.id} (${course.fullname}): ${displayPrice}`);
+      }
+
+      // currency custom field
+      const currencyField = course.customfields.find(
+        (field: any) => ['currency'].includes(String(field.shortname).toLowerCase()) || String(field.name).toLowerCase().includes('currency')
+      );
+      if (currencyField && currencyField.value) {
+        let currencyVal = typeof currencyField.value === 'object' ? currencyField.value.text || String(currencyField.value) : String(currencyField.value);
+        // Strip HTML tags from custom field values
+        currencyVal = currencyVal.replace(/<[^>]*>/g, '').trim();
+        if (currencyVal) currency = currencyVal;
+        console.log(`💱 Found custom field currency for course ${course.id} (${course.fullname}): ${currency}`);
+      }
+    }
+
+    // Get payment/enrolment info for the course
+    console.log(`🔍 Checking enrollment fee for course ${course.id} (${course.fullname})...`);
+    const paymentInfo = await getCoursePaymentInfo(course.id, token);
+    if (paymentInfo) {
+      cost = paymentInfo.cost;
+      currency = paymentInfo.currency || currency;
+      requiresPayment = !!paymentInfo.requiresPayment;
+      console.log(`✅ Enrollment fee from Moodle: ${currency} ${cost}`);
+    } else {
+      console.log(`ℹ️ No enrollment fee configured for course ${course.id}`);
+    }
+
+    return {
+      ...course,
+      cost,
+      currency,
+      requiresPayment,
+      displayPrice,
+    };
+  } catch (error) {
+    console.error('Error fetching course with enrollment:', error);
+    return null;
   }
 }
 

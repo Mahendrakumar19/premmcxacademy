@@ -67,7 +67,8 @@ export default function CheckoutPage() {
 
       if (result.success) {
         clearCart();
-        router.push('/my-courses?enrolled=true');
+        // Redirect to payment receipt page for free enrollment
+        router.push(`/payment-receipt?orderId=free-${Date.now()}&paymentId=FREE`);
       } else {
         throw new Error('Enrollment failed');
       }
@@ -187,7 +188,8 @@ export default function CheckoutPage() {
 
             if (result.success) {
               clearCart();
-              router.push('/my-courses?enrolled=true');
+              // Redirect to payment receipt page with transaction details
+              router.push(`/payment-receipt?orderId=${response.razorpay_order_id}&paymentId=${response.razorpay_payment_id}`);
             } else {
               setError('Payment verification failed');
             }

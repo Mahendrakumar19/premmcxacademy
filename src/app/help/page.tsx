@@ -245,7 +245,7 @@ export default function HelpPage() {
                 <h3 className="text-xl font-bold text-gray-900 mb-2">Email Support</h3>
                 <p className="text-gray-600 mb-4">Get help via email</p>
                 <a href="mailto:contact@premmcxtraining.com" className="text-indigo-600 hover:text-indigo-700 font-semibold">
-                  contact@premmcxtraining.com
+                  premmcxtrainingacademy@gmail.com
                 </a>
               </div>
               

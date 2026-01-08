@@ -357,23 +357,44 @@ export default function CourseDetailPage({ params }: { params: Promise<{ id: str
                   <div className="space-y-4">
                     <button
                       onClick={() => {
-                        if (course) {
+                        if (!course) return;
+                        
+                        // Check if user is logged in
+                        if (status === 'unauthenticated') {
+                          // Store the course to add after login
                           const imageUrl = course.courseimage || 
                                          course.imageurl || 
                                          '/placeholder-course.jpg';
                           
-                          addToCart({
+                          sessionStorage.setItem('pendingAddToCart', JSON.stringify({
                             courseId: course.id,
                             courseName: course.fullname,
                             cost: String(course.displayPrice || course.price || '0'),
                             currency: course.currency || 'INR',
                             thumbnailUrl: imageUrl,
-                          });
+                          }));
                           
-                          // Show success message
-                          alert('✅ Added to cart! Proceed to checkout to complete payment.');
-                          router.push('/cart');
+                          // Redirect to login
+                          router.push(`/auth/login?callbackUrl=${encodeURIComponent('/')}`);
+                          return;
                         }
+                        
+                        // User is logged in - add to cart
+                        const imageUrl = course.courseimage || 
+                                       course.imageurl || 
+                                       '/placeholder-course.jpg';
+                        
+                        addToCart({
+                          courseId: course.id,
+                          courseName: course.fullname,
+                          cost: String(course.displayPrice || course.price || '0'),
+                          currency: course.currency || 'INR',
+                          thumbnailUrl: imageUrl,
+                        });
+                        
+                        // Show success message and redirect to cart
+                        alert('✅ Added to cart! Proceed to checkout to complete payment.');
+                        router.push('/cart');
                       }}
                       className="w-full px-6 py-4 bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700 text-white rounded-xl font-bold text-lg transition-all duration-300 shadow-lg hover:shadow-xl transform hover:-translate-y-1 flex items-center justify-center gap-2"
                     >

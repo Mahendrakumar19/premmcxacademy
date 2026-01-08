@@ -43,6 +43,15 @@ export default function ContactPage() {
         <div className="absolute inset-0 bg-gradient-to-t from-black/20 to-transparent"></div>
         
         <div className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
+          <div className="flex justify-center mb-6">
+            <img 
+              src="/logo p.png" 
+              alt="PremMCX Training Academy Logo" 
+              width={120} 
+              height={120} 
+              className="rounded-full border-4 border-white/20 shadow-lg"
+            />
+          </div>
           <h1 className="text-5xl md:text-6xl font-bold text-white mb-6 leading-tight">
             Get In <span className="text-yellow-300">Touch</span>
           </h1>
@@ -200,7 +209,7 @@ export default function ContactPage() {
                   </div>
                   <div>
                     <h4 className="font-semibold text-gray-900 mb-1">Email</h4>
-                    <p className="text-gray-600">contact@premmcxtraining.com</p>
+                    <p className="text-gray-600">premmcxtrainingacademy@gmail.com</p>
                     <p className="text-sm text-gray-500">Response within 24 hours</p>
                   </div>
                 </div>

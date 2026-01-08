@@ -18,48 +18,70 @@ export async function GET(request: Request) {
 
     // Transform courses to include proper pricing and image data
     const transformedCourses = courses.map((course: any) => {
-      // Get display price from custom field 'coursecost'
-      let displayPrice = null;
-      
-      // Debug: log what custom fields we're getting
-      if (course.customfields && Array.isArray(course.customfields)) {
-        console.log(`📋 Course ${course.id} (${course.fullname}) custom fields:`, course.customfields);
-        const priceField = course.customfields.find(
-          (field: any) => field.shortname === 'coursecost' || field.name === 'Course Cost'
-        );
-        if (priceField) {
-          displayPrice = priceField.value;
-          console.log(`✅ Found price field:`, priceField);
-        } else {
-          console.log(`❌ No coursecost field found in:`, course.customfields.map((f: any) => f.shortname || f.name));
+      try {
+        // Use values already extracted by getAllCoursesWithEnrolment if available
+        let displayPrice = course.displayPrice || null;
+        let cost = course.cost || null;
+        let currency = course.currency || 'INR';
+        
+        // Fallback: Check custom fields if not already extracted or if we need to refine them
+        if (course.customfields && Array.isArray(course.customfields)) {
+          const priceField = course.customfields.find(
+            (field: any) => field.shortname === 'cost' || field.shortname === 'coursecost' || field.name === 'CourseCost' || field.name === 'Course Cost'
+          );
+          if (priceField && priceField.value !== undefined && priceField.value !== null) {
+            const val = typeof priceField.value === 'object' && priceField.value !== null ? priceField.value.text : priceField.value;
+            if (!displayPrice) displayPrice = val;
+          }
+
+          if (!course.currency || course.currency === 'INR') {
+            const currencyField = course.customfields.find(
+              (field: any) => field.shortname === 'currency' || field.name === 'Currency'
+            );
+            if (currencyField && currencyField.value !== undefined && currencyField.value !== null) {
+              const val = typeof currencyField.value === 'object' && currencyField.value !== null ? currencyField.value.text : currencyField.value;
+              currency = val || currency;
+            }
+          }
         }
-      } else {
-        console.log(`⚠️ Course ${course.id} has no customfields property`, Object.keys(course).slice(0, 10));
+
+        // Final price for payment logic
+        const actualPrice = cost || displayPrice;
+
+        // Safely extract image URL
+        let imageurl = course.courseimage || null;
+        if (!imageurl && course.overviewfiles && Array.isArray(course.overviewfiles) && course.overviewfiles.length > 0) {
+          imageurl = course.overviewfiles[0].fileurl;
+        }
+
+        // Safely parse price for boolean logic
+        const numericPrice = actualPrice ? parseFloat(String(actualPrice).replace(/[^\d.]/g, '')) : 0;
+
+        return {
+          id: course.id,
+          fullname: course.fullname || 'Untitled Course',
+          shortname: course.shortname || '',
+          summary: course.summary || '',
+          displayname: course.displayname || course.fullname || 'Untitled Course',
+          categoryname: course.categoryname || course.category?.name || 'General',
+          enrollmentcount: course.enrollmentcount || 0,
+          displayPrice: displayPrice,
+          price: actualPrice,
+          currency: currency,
+          imageurl: imageurl,
+          requiresPayment: course.requiresPayment || (!isNaN(numericPrice) && numericPrice > 0) || false,
+          paymentaccount: course.paymentaccount || null,
+        };
+      } catch (err) {
+        console.error(`❌ Error transforming course ${course?.id}:`, err);
+        // Return a minimal course object instead of crashing the whole list
+        return {
+          id: course?.id || 0,
+          fullname: course?.fullname || 'Error loading course',
+          price: null,
+          error: true
+        };
       }
-
-      // Use actual payment enrolment fee if available, otherwise use display price
-      const actualPrice = course.cost || displayPrice;
-
-      return {
-        id: course.id,
-        fullname: course.fullname,
-        shortname: course.shortname,
-        summary: course.summary || '',
-        displayname: course.displayname || course.fullname,
-        categoryname: course.categoryname || course.category?.name || 'General',
-        enrollmentcount: course.enrollmentcount || 0,
-        // Display price (from custom field for UI)
-        displayPrice: displayPrice,
-        // Actual charge (from payment enrolment fee for payment)
-        price: actualPrice,
-        currency: course.currency || 'INR',
-        // Get course image from overviewfiles or courseimage
-        imageurl: course.courseimage || (course.overviewfiles && course.overviewfiles.length > 0 ? course.overviewfiles[0].fileurl : null),
-        // Whether payment is required
-        requiresPayment: course.requiresPayment || false,
-        // Payment account info
-        paymentaccount: course.paymentaccount || null,
-      };
     });
 
     return NextResponse.json(transformedCourses);

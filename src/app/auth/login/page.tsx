@@ -3,10 +3,12 @@ import React, { useState, Suspense } from "react";
 import Link from "next/link";
 import { signIn } from "next-auth/react";
 import { useRouter, useSearchParams } from "next/navigation";
+import { useCart } from "@/context/CartContext";
 
 function LoginForm() {
   const router = useRouter();
   const searchParams = useSearchParams();
+  const { addToCart } = useCart();
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [formData, setFormData] = useState({
@@ -31,7 +33,22 @@ function LoginForm() {
       if (result?.error) {
         setError("Invalid username or password");
       } else if (result?.ok) {
-        router.push(callbackUrl);
+        // Check if there's a pending cart item to add after login
+        const pendingItem = sessionStorage.getItem('pendingAddToCart');
+        if (pendingItem) {
+          try {
+            const item = JSON.parse(pendingItem);
+            addToCart(item);
+            sessionStorage.removeItem('pendingAddToCart');
+            // Redirect to cart instead of callback URL if there's a pending item
+            router.push('/cart');
+          } catch (err) {
+            console.error('Error adding pending cart item:', err);
+            router.push(callbackUrl);
+          }
+        } else {
+          router.push(callbackUrl);
+        }
         router.refresh();
       }
     } catch (error) {

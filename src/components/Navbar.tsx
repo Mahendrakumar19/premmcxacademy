@@ -5,6 +5,7 @@ import { useSession, signOut } from "next-auth/react";
 import { useCart } from "@/context/CartContext";
 import { useRoleBasedNavigation } from "@/hooks/useRoleBasedNavigation";
 import { getRoleDisplayName } from "@/lib/rbac";
+import Image from "next/image";
 
 export default function Navbar() {
   const { data: session, status } = useSession();
@@ -23,12 +24,8 @@ export default function Navbar() {
   return (
     <nav className="sticky top-0 z-50 w-full bg-white/95 backdrop-blur-md border-b border-gray-200 shadow-sm">
       <div className="mx-auto flex max-w-7xl items-center justify-between px-6 py-4">
-        <Link href="/" className="flex items-center gap-3 group">
-          <div className="relative">
-            <div className="flex h-11 w-11 items-center justify-center rounded-full bg-gradient-to-br from-indigo-500 to-purple-600 text-lg font-bold text-white shadow-lg group-hover:shadow-xl transition-shadow">
-              P
-            </div>
-          </div>
+        <Link href="/" className="flex items-center gap-2 group">
+          <Image src="/logo pp.svg" alt="PremMCX Logo" width={40} height={40} className="h-10 w-10" />
           <div className="flex flex-col">
             <span className="text-lg font-bold text-gray-900 group-hover:text-indigo-600 transition-colors">
               PremMCX

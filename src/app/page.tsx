@@ -4,8 +4,8 @@ import { useState, useEffect } from 'react';
 import Navbar from '@/components/Navbar';
 import { useCart } from '@/context/CartContext';
 import { useRouter } from 'next/navigation';
+import { useSession } from 'next-auth/react';
 import Image from 'next/image';
-import { paymentService } from '@/lib/payment-service';
 
 interface Course {
   id: number;
@@ -34,6 +34,7 @@ export default function HomePage() {
   const [priceRange, setPriceRange] = useState<[number, number]>([0, 50000]);
   const { addToCart } = useCart();
   const router = useRouter();
+  const { status } = useSession();
 
   useEffect(() => {
     fetchCourses();
@@ -55,9 +56,21 @@ export default function HomePage() {
         throw new Error(data.error || 'Moodle API error');
       }
       
-      // Handle raw Moodle data directly, filter out course 1 (dummy)
-      const filteredData = Array.isArray(data) ? data.filter(c => c.id !== 1) : [];
+      // Handle raw Moodle data directly, filter out course 1 (site course - PremMCXTrainingAcademy)
+      const filteredData = Array.isArray(data) ? data.filter(c => {
+        // Filter out course ID 1 (site course) and courses with format 'site'
+        return c.id !== 1 && c.format !== 'site';
+      }) : [];
+      
+          console.log('🎓 Filtered courses:', filteredData.length, filteredData.map(c => ({ id: c.id, name: c.fullname, price: c.displayPrice })));
       setCourses(filteredData);
+
+      // Debug helper: expose fetched/filtered data on page for quick diagnostics
+      try {
+        (window as any).__DEBUG_COURSES = { fetched: data, filtered: filteredData };
+      } catch (e) {
+        // ignore in non-browser contexts
+      }
     } catch (error) {
       console.error('Error fetching courses:', error);
       setCourses([]);
@@ -82,12 +95,28 @@ export default function HomePage() {
   });
 
   const handleAddToCart = (course: Course) => {
-    // Get image from multiple sources
     const imageUrl = course.courseimage || 
                      course.imageurl || 
                      course.overviewfiles?.[0]?.fileurl || 
                      '/placeholder-course.jpg';
     
+    // Check if user is logged in
+    if (status === 'unauthenticated') {
+      // Store the course to add after login
+      sessionStorage.setItem('pendingAddToCart', JSON.stringify({
+        courseId: course.id,
+        courseName: course.fullname,
+        cost: String(course.displayPrice || course.price || '0'),
+        currency: course.currency || 'INR',
+        thumbnailUrl: imageUrl,
+      }));
+      
+      // Redirect to login page
+      router.push(`/auth/login?callbackUrl=${encodeURIComponent('/')}`);
+      return;
+    }
+    
+    // User is logged in - add to cart
     addToCart({
       courseId: course.id,
       courseName: course.fullname,
@@ -95,26 +124,6 @@ export default function HomePage() {
       currency: course.currency || 'INR',
       thumbnailUrl: imageUrl,
     });
-  };
-  
-  const handleDirectPayment = async (course: Course) => {
-    try {
-      // Process direct payment using the payment service
-      const result = await paymentService.processDirectPayment({
-        courseId: course.id,
-        amount: parseFloat(String(course.displayPrice || course.price || '0')) * 100, // Convert to paise
-        currency: course.currency || 'INR'
-      });
-      
-      // If payment service indicates user is not authenticated, handle it
-      if (!result.success && result.message === 'User not authenticated') {
-        // The payment service already redirects to login, so we don't need to do anything else
-        return;
-      }
-    } catch (error) {
-      console.error('Error processing payment:', error);
-      alert('An error occurred while processing your payment. Please try again.');
-    }
   };
 
   return (
@@ -289,22 +298,13 @@ export default function HomePage() {
                   key={course.id}
                   className="group bg-white rounded-2xl shadow-md hover:shadow-2xl transition-all duration-300 overflow-hidden border border-gray-100 hover:border-indigo-200 transform hover:-translate-y-2"
                 >
-                  {/* Course Image */}
-                  <div className="relative h-48 bg-gradient-to-br from-indigo-500 to-purple-600 overflow-hidden">
-                    {(course.courseimage || course.imageurl || course.overviewfiles?.[0]?.fileurl) ? (
-                      <Image
-                        src={course.courseimage || course.imageurl || course.overviewfiles?.[0]?.fileurl || ''}
-                        alt={course.fullname}
-                        fill
-                        className="object-cover group-hover:scale-110 transition-transform duration-300"
-                      />
-                    ) : (
-                      <div className="w-full h-full flex items-center justify-center">
-                        <svg className="w-20 h-20 text-white/50" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253" />
-                        </svg>
-                      </div>
-                    )}
+                  {/* Course Header Gradient */}
+                  <div className="relative h-48 bg-gradient-to-br from-indigo-500 via-purple-500 to-pink-500 overflow-hidden">
+                    <div className="w-full h-full flex items-center justify-center">
+                      <svg className="w-24 h-24 text-white/30" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253" />
+                      </svg>
+                    </div>
                     
                     {/* Category Badge */}
                     {course.categoryname && (
@@ -379,24 +379,15 @@ export default function HomePage() {
                         >
                           View Details
                         </button>
-                        {course.requiresPayment && course.price && parseFloat(String(course.price)) > 0 ? (
-                          <button
-                            onClick={() => handleDirectPayment(course)}
-                            className="px-4 py-2 bg-green-600 text-white rounded-lg font-medium hover:bg-green-700 transition-colors shadow-md hover:shadow-lg"
-                          >
-                            Buy Now
-                          </button>
-                        ) : (
-                          <button
-                            onClick={() => handleAddToCart(course)}
-                            className="p-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-indigo-100 hover:text-indigo-600 transition-colors"
-                            title="Add to Cart"
-                          >
-                            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 3h2l.4 2M7 13h10l4-8H5.4M7 13L5.4 5M7 13l-2.293 2.293c-.63.63-.184 1.707.707 1.707H17m0 0a2 2 0 100 4 2 2 0 000-4zm-8 2a2 2 0 11-4 0 2 2 0 014 0z" />
-                            </svg>
-                          </button>
-                        )}
+                        <button
+                          onClick={() => handleAddToCart(course)}
+                          className="p-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-indigo-100 hover:text-indigo-600 transition-colors"
+                          title="Add to Cart / Enroll"
+                        >
+                          <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 3h2l.4 2M7 13h10l4-8H5.4M7 13L5.4 5M7 13l-2.293 2.293c-.63.63-.184 1.707.707 1.707H17m0 0a2 2 0 100 4 2 2 0 000-4zm-8 2a2 2 0 11-4 0 2 2 0 014 0z" />
+                          </svg>
+                        </button>
                       </div>
                     </div>
                   </div>

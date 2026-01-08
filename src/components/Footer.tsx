@@ -70,34 +70,39 @@ export default function Footer() {
             </ul>
           </div>
 
-          {/* Support */}
+          {/* Support & Legal */}
           <div>
-            <h4 className="text-white font-semibold mb-4">Support</h4>
+            <h4 className="text-white font-semibold mb-4">Support & Legal</h4>
             <ul className="space-y-2">
-              <li>
-                <Link href="/help" className="text-sm hover:text-white transition-colors">
-                  Help Center
-                </Link>
-              </li>
-              <li>
-                <a href="https://merchant.razorpay.com/policy/RxlhpDIEWPy90r/contact_us" target="_blank" rel="noopener noreferrer" className="text-sm hover:text-white transition-colors">
-                  Contact Us
-                </a>
-              </li>
               <li>
                 <Link href="/faq" className="text-sm hover:text-white transition-colors">
                   FAQ
                 </Link>
               </li>
               <li>
-                <a href="https://merchant.razorpay.com/policy/RxlhpDIEWPy90r/privacy" target="_blank" rel="noopener noreferrer" className="text-sm hover:text-white transition-colors">
-                  Privacy Policy
-                </a>
+                <Link href="/help" className="text-sm hover:text-white transition-colors">
+                  Help Center
+                </Link>
               </li>
               <li>
-                <a href="https://merchant.razorpay.com/policy/RxlhpDIEWPy90r/shipping" target="_blank" rel="noopener noreferrer" className="text-sm hover:text-white transition-colors">
-                  Shipping Policy
-                </a>
+                <Link href="/refund" className="text-sm hover:text-white transition-colors">
+                  Refund & Cancellation
+                </Link>
+              </li>
+              <li>
+                <Link href="/shipping" className="text-sm hover:text-white transition-colors">
+                  Course Access
+                </Link>
+              </li>
+              <li>
+                <Link href="/privacy" className="text-sm hover:text-white transition-colors">
+                  Privacy Policy
+                </Link>
+              </li>
+              <li>
+                <Link href="/terms" className="text-sm hover:text-white transition-colors">
+                  Terms & Conditions
+                </Link>
               </li>
             </ul>
           </div>
@@ -120,7 +125,7 @@ export default function Footer() {
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
                 </svg>
                 <div>
-                  <p className="text-sm">contact@premmcxtraining.com</p>
+                  <p className="text-sm">premmcxtrainingacademy@gmail.com</p>
                   <p className="text-xs text-gray-500">Response in 24hrs</p>
                 </div>
               </li>
@@ -142,18 +147,15 @@ export default function Footer() {
               © {new Date().getFullYear()} PremMCX Training Academy. All rights reserved.
             </p>
             <div className="flex flex-wrap gap-6 justify-center">
-              <a href="https://merchant.razorpay.com/policy/RxlhpDIEWPy90r/terms" target="_blank" rel="noopener noreferrer" className="text-sm text-gray-400 hover:text-white transition-colors">
+              <Link href="/terms" className="text-sm text-gray-400 hover:text-white transition-colors">
                 Terms & Conditions
-              </a>
-              <a href="https://merchant.razorpay.com/policy/RxlhpDIEWPy90r/privacy" target="_blank" rel="noopener noreferrer" className="text-sm text-gray-400 hover:text-white transition-colors">
+              </Link>
+              <Link href="/privacy" className="text-sm text-gray-400 hover:text-white transition-colors">
                 Privacy Policy
-              </a>
-              <a href="https://merchant.razorpay.com/policy/RxlhpDIEWPy90r/refund" target="_blank" rel="noopener noreferrer" className="text-sm text-gray-400 hover:text-white transition-colors">
-                Refund & Cancellation
-              </a>
-              <a href="https://merchant.razorpay.com/policy/RxlhpDIEWPy90r/shipping" target="_blank" rel="noopener noreferrer" className="text-sm text-gray-400 hover:text-white transition-colors">
-                Shipping Policy
-              </a>
+              </Link>
+              <Link href="/contact" className="text-sm text-gray-400 hover:text-white transition-colors">
+                Contact Us
+              </Link>
             </div>
           </div>
         </div>

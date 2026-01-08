@@ -96,9 +96,8 @@ export async function GET(req: Request) {
         
         if (withPayment) {
           // Get single course with payment info using optimized function
-          const { getAllCoursesWithEnrolment } = await import('@/lib/moodle-api');
-          const courses = await getAllCoursesWithEnrolment(token);
-          const course = courses.find(c => c.id === courseId);
+          const { getCourseWithEnrolment } = await import('@/lib/moodle-api');
+          const course = await getCourseWithEnrolment(courseId, token);
           
           if (!course) {
             return NextResponse.json(

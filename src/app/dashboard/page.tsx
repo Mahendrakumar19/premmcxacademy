@@ -58,11 +58,20 @@ function DashboardContent() {
       const inProgress = userCourses.filter((c: Course) => c.progress && c.progress > 0 && c.progress < 100).length;
       const completed = userCourses.filter((c: Course) => c.progress === 100).length;
       
+      // Calculate total hours based on actual progress (hours per course based on completion)
+      const totalHours = userCourses.reduce((hours: number, course: Course) => {
+        // Base course duration in hours
+        const courseDuration = 40; // Each course is typically 40 hours
+        // Hours completed = course duration * (progress / 100)
+        const hoursCompleted = courseDuration * ((course.progress || 0) / 100);
+        return hours + hoursCompleted;
+      }, 0);
+      
       setStats({
         totalCourses: userCourses.length,
         inProgressCourses: inProgress,
         completedCourses: completed,
-        totalHours: userCourses.length * 12, // Estimate
+        totalHours: Math.round(totalHours),
       });
     } catch (error) {
       console.error('Error loading dashboard:', error);
