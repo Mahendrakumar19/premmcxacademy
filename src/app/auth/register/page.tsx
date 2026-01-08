@@ -3,6 +3,7 @@ import React, { useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useCart } from "@/context/CartContext";
+import Image from "next/image";
 
 export default function RegisterPage() {
   const router = useRouter();
@@ -99,10 +100,14 @@ export default function RegisterPage() {
       <div className="w-full max-w-md">
         {/* Logo */}
         <div className="text-center mb-8">
-          <Link href="/" className="inline-flex items-center gap-3">
-            <div className="flex h-14 w-14 items-center justify-center rounded-full bg-linear-to-br from-yellow-400 to-orange-500 text-xl font-bold text-white shadow-lg">
-              P
-            </div>
+          <Link href="/" className="inline-flex items-center gap-3 justify-center">
+            <Image 
+              src="/logo p.png" 
+              alt="PremMCX Logo" 
+              width={56} 
+              height={56}
+              className="rounded-full shadow-lg"
+            />
             <div className="flex flex-col items-start">
               <span className="text-2xl font-bold text-gray-900">Prem MCX</span>
               <span className="text-sm text-gray-600">Trading Academy</span>

@@ -1,4 +1,5 @@
 import Link from 'next/link';
+import Image from 'next/image';
 
 export default function Footer() {
   return (
@@ -7,10 +8,14 @@ export default function Footer() {
         <div className="grid grid-cols-1 md:grid-cols-4 gap-8 mb-8">
           {/* Company Info */}
           <div className="space-y-4">
-            <div className="flex items-center gap-2">
-              <div className="flex h-10 w-10 items-center justify-center rounded-full bg-gradient-to-br from-yellow-400 to-orange-500 text-base font-bold text-white">
-                P
-              </div>
+            <div className="flex items-center gap-3">
+              <Image 
+                src="/logo p.png" 
+                alt="PremMCX Logo" 
+                width={40} 
+                height={40}
+                className="rounded-full"
+              />
               <div>
                 <h3 className="text-white font-bold text-lg">PremMCX</h3>
                 <p className="text-xs text-gray-400">Training Academy</p>
@@ -158,6 +163,18 @@ export default function Footer() {
               </Link>
             </div>
           </div>
+          <p className="text-xs text-gray-500 mt-2">
+  Designed &amp; Developed by{" "}
+  <a
+    href="https://nighwantech.com/"
+    target="_blank"
+    rel="noopener noreferrer"
+    className="text-orange-400 hover:text-orange-500 transition-colors"
+  >
+    Nighwan Technology Pvt. Ltd.
+  </a>
+</p>
+
         </div>
       </div>
     </footer>
