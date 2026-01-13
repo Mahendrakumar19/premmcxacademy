@@ -372,24 +372,37 @@ function normalizePluginfileUrl(url: string) {
   try {
     if (!url || typeof url !== 'string') return url;
 
-    // Replace /webservice/pluginfile.php with /pluginfile.php
-    const newUrl = url.replace('/webservice/pluginfile.php', '/pluginfile.php');
+    // Handle both pluginfile.php and draftfile.php
+    let newUrl = url;
+    if (newUrl.includes('/webservice/pluginfile.php')) {
+      newUrl = newUrl.replace('/webservice/pluginfile.php', '/pluginfile.php');
+    } else if (newUrl.includes('/webservice/draftfile.php')) {
+      newUrl = newUrl.replace('/webservice/draftfile.php', '/draftfile.php');
+    }
 
-    // Remove any webservice token query parameters (like token=... or wstoken=...)
+    // Parse URL to manipulate parameters
     const u = new URL(newUrl);
-    if (u.searchParams.has('token')) u.searchParams.delete('token');
-    if (u.searchParams.has('wstoken')) u.searchParams.delete('wstoken');
-    // Also remove moodlewsrestformat if present
-    if (u.searchParams.has('moodlewsrestformat')) u.searchParams.delete('moodlewsrestformat');
-    // Remove forcedownload param to avoid download forcing
-    if (u.searchParams.has('forcedownload')) u.searchParams.delete('forcedownload');
-    if (u.searchParams.has('forcedownload')) u.searchParams.delete('forcedownload');
-    if (u.searchParams.has('download')) u.searchParams.delete('download');
+    
+    // Remove any webservice token query parameters
+    const paramsToRemove = [
+      'token', 
+      'wstoken', 
+      'moodlewsrestformat', 
+      'forcedownload', 
+      'download',
+      'preview' // Sometimes preview=thumb causes issues with SVG
+    ];
+    
+    paramsToRemove.forEach(param => {
+      if (u.searchParams.has(param)) {
+        u.searchParams.delete(param);
+      }
+    });
 
     // Reconstruct URL without the unwanted params
-    u.search = u.searchParams.toString();
     return u.toString();
-  } catch {
+  } catch (e) {
+    console.error('Error normalizing Moodle URL:', e);
     return url;
   }
 }

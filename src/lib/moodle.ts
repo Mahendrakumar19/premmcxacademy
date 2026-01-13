@@ -328,3 +328,19 @@ export async function getUserHighestRole(
     return 'student';
   }
 }
+
+/**
+ * Get autologin key and URL from Moodle
+ */
+export async function getAutologinKey(token: string): Promise<{ key: string; autologinurl: string }> {
+  try {
+    return await callMoodle<{ key: string; autologinurl: string }>(
+      'tool_mobile_get_autologin_key',
+      {},
+      token
+    );
+  } catch (error) {
+    console.error('❌ Error getting autologin key:', error);
+    throw error;
+  }
+}

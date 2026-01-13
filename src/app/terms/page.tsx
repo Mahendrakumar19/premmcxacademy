@@ -1,14 +1,14 @@
+import Navbar from "@/components/Navbar";
+
 export default function TermsPage() {
   return (
     <div className="min-h-screen bg-gradient-to-b from-slate-50 to-white">
+      <Navbar />
       {/* Hero Section */}
       <div className="bg-gradient-to-br from-indigo-600 via-purple-600 to-blue-600 text-white py-20">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="text-center">
             <h1 className="text-5xl font-bold mb-6">Terms of Service</h1>
-            <p className="text-xl text-indigo-100 max-w-3xl mx-auto">
-              Last Updated: December 30, 2025
-            </p>
           </div>
         </div>
       </div>
@@ -261,7 +261,7 @@ export default function TermsPage() {
 
             <h3 className="text-xl font-semibold text-gray-900 mb-3 mt-6">Informal Resolution</h3>
             <p className="text-gray-700">
-              Before filing any formal legal action, you agree to first contact us at contact@premmcxtraining.com to attempt to resolve the dispute informally. Most disputes can be resolved through communication.
+              Before filing any formal legal action, you agree to first contact us at premmcxtrainingacademy@gmail.com to attempt to resolve the dispute informally. Most disputes can be resolved through communication.
             </p>
           </section>
 
@@ -272,7 +272,7 @@ export default function TermsPage() {
               We reserve the right to modify these Terms at any time. Changes will be effective immediately upon posting to the Platform. We will notify users of material changes via email or Platform notification. Your continued use of the Platform after changes are posted constitutes acceptance of the modified Terms.
             </p>
             <p className="text-gray-700 mt-4">
-              We recommend reviewing these Terms periodically. The "Last Updated" date at the top indicates when these Terms were last revised.
+              We recommend reviewing these Terms periodically.
             </p>
           </section>
 
@@ -325,8 +325,8 @@ export default function TermsPage() {
                 <svg className="w-6 h-6 text-indigo-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
                 </svg>
-                <a href="mailto:contact@premmcxtraining.com" className="text-indigo-600 hover:text-indigo-700 font-semibold">
-                  contact@premmcxtraining.com
+                <a href="mailto:premmcxtrainingacademy@gmail.com" className="text-indigo-600 hover:text-indigo-700 font-semibold">
+                  premmcxtrainingacademy@gmail.com
                 </a>
               </div>
               

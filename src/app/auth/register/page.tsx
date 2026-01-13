@@ -3,7 +3,9 @@ import React, { useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useCart } from "@/context/CartContext";
+import { signIn } from "next-auth/react";
 import Image from "next/image";
+import Navbar from "@/components/Navbar";
 
 export default function RegisterPage() {
   const router = useRouter();
@@ -58,6 +60,19 @@ export default function RegisterPage() {
       if (response.ok) {
         setSuccess(true);
         
+        // Auto-login after successful registration
+        const loginResult = await signIn("credentials", {
+          username: formData.username,
+          password: formData.password,
+          redirect: false,
+        });
+
+        if (loginResult?.error) {
+          console.error("Auto-login failed:", loginResult.error);
+          router.push("/auth/login?registered=true");
+          return;
+        }
+        
         // Check if there's a pending cart item to add after signup
         const pendingItem = sessionStorage.getItem('pendingAddToCart');
         
@@ -71,10 +86,10 @@ export default function RegisterPage() {
               router.push('/cart');
             } catch (err) {
               console.error('Error adding pending cart item:', err);
-              router.push("/auth/login?registered=true");
+              router.push("/dashboard");
             }
           } else {
-            router.push("/auth/login?registered=true");
+            router.push("/dashboard");
           }
         }, 2000);
       } else {
@@ -96,8 +111,10 @@ export default function RegisterPage() {
   };
 
   return (
-    <div className="min-h-screen bg-gray-50 flex items-center justify-center px-4 py-12">
-      <div className="w-full max-w-md">
+    <div className="min-h-screen bg-gray-50 flex flex-col">
+      <Navbar />
+      <div className="flex-1 flex items-center justify-center px-4 py-12">
+        <div className="w-full max-w-md">
         {/* Logo */}
         <div className="text-center mb-8">
           <Link href="/" className="inline-flex items-center gap-3 justify-center">
@@ -366,5 +383,6 @@ export default function RegisterPage() {
         </div>
       </div>
     </div>
+  </div>
   );
 }

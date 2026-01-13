@@ -2,6 +2,7 @@
 import Link from "next/link";
 import React, { useState, useEffect } from "react";
 import { useSession, signOut } from "next-auth/react";
+import { usePathname, useRouter } from "next/navigation";
 import { useCart } from "@/context/CartContext";
 import { useRoleBasedNavigation } from "@/hooks/useRoleBasedNavigation";
 import { getRoleDisplayName } from "@/lib/rbac";
@@ -9,6 +10,8 @@ import Image from "next/image";
 
 export default function Navbar() {
   const { data: session, status } = useSession();
+  const pathname = usePathname();
+  const router = useRouter();
   const { getItemCount } = useCart();
   const { isAdmin, isTeacher, role } = useRoleBasedNavigation();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
@@ -24,15 +27,28 @@ export default function Navbar() {
   return (
     <nav className="sticky top-0 z-50 w-full bg-white/95 backdrop-blur-md border-b border-gray-200 shadow-sm">
       <div className="mx-auto flex max-w-7xl items-center justify-between px-6 py-4">
-        <Link href="/" className="flex items-center gap-2 group">
-          <Image src="/logo pp.svg" alt="PremMCX Logo" width={40} height={40} className="h-10 w-10" />
-          <div className="flex flex-col">
-            <span className="text-lg font-bold text-gray-900 group-hover:text-indigo-600 transition-colors">
-              PremMCX
-            </span>
-            <span className="text-xs text-gray-500">Trading Academy</span>
-          </div>
-        </Link>
+        <div className="flex items-center gap-4">
+          {pathname !== "/" && (
+            <button
+              onClick={() => router.back()}
+              className="flex h-10 w-10 items-center justify-center rounded-full bg-gray-50 border border-gray-200 text-gray-600 hover:bg-gray-100 hover:text-indigo-600 transition-all shadow-sm"
+              title="Go Back"
+            >
+              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 19l-7-7m0 0l7-7m-7 7h18" />
+              </svg>
+            </button>
+          )}
+          <Link href="/" className="flex items-center gap-2 group">
+            <Image src="/logo pp.svg" alt="PremMCX Logo" width={40} height={40} className="h-10 w-10" />
+            <div className="flex flex-col">
+              <span className="text-lg font-bold text-gray-900 group-hover:text-indigo-600 transition-colors">
+                PremMCX
+              </span>
+              <span className="text-xs text-gray-500">Trading Academy</span>
+            </div>
+          </Link>
+        </div>
 
         {/* Desktop Menu */}
         <div className="hidden items-center gap-6 md:flex">
@@ -275,7 +291,7 @@ export default function Navbar() {
                   </Link>
                   <div className="border-t border-gray-200 my-2"></div>
                   <button
-                    onClick={() => signOut({ callbackUrl: "/" })}
+                    onClick={() => signOut({ callbackUrl: "/auth/signout" })}
                     className="flex items-center w-full text-left px-4 py-2 text-sm text-red-600 hover:bg-red-50 transition-colors"
                   >
                     <svg className="w-4 h-4 mr-3 text-red-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -407,7 +423,7 @@ export default function Navbar() {
                 <button
                   onClick={() => {
                     setMobileMenuOpen(false);
-                    signOut({ callbackUrl: "/" });
+                    signOut({ callbackUrl: "/auth/signout" });
                   }}
                   className="text-left text-sm font-semibold text-red-600"
                 >

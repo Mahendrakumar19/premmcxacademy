@@ -7,6 +7,7 @@ import {
   getUserGrades,
   searchCourses,
   getCoursesWithEnrolmentInfo,
+  getAutologinKey,
 } from '@/lib/moodle';
 import { getCoursePaymentInfo, getCoursesWithPaymentInfo } from '@/lib/moodle-payment';
 import { demoCourses, demoSiteInfo, isMoodleConfigured } from '@/lib/demo-data';
@@ -199,6 +200,17 @@ export async function GET(req: Request) {
         const criteriavalue = searchParams.get('criteriavalue') || '';
         const results = await searchCourses(criterianame, criteriavalue, token);
         return NextResponse.json({ ok: true, data: results.courses });
+      }
+
+      case 'autologin': {
+        if (!token) {
+          return NextResponse.json(
+            { ok: false, error: 'token is required' },
+            { status: 400 }
+          );
+        }
+        const data = await getAutologinKey(token);
+        return NextResponse.json({ ok: true, data });
       }
 
       default:

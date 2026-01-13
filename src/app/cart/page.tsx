@@ -80,10 +80,10 @@ export default function CartPage() {
       <Navbar />
 
       <main className="max-w-7xl mx-auto px-4 py-12">
-        <div className="mb-8">
-          <h1 className="text-4xl font-bold text-gray-900 mb-2">Shopping Cart</h1>
-          <p className="text-gray-600">{itemCount} course{itemCount !== 1 ? 's' : ''} in your cart</p>
+        <div className="flex items-center gap-4 mb-8">
+          <h1 className="text-4xl font-bold text-gray-900">Shopping Cart</h1>
         </div>
+        <p className="text-gray-600 mb-8">{itemCount} course{itemCount !== 1 ? 's' : ''} in your cart</p>
 
         {itemCount === 0 ? (
           <div className="bg-white border border-gray-200 rounded-lg p-12 text-center">

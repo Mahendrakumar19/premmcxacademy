@@ -158,8 +158,8 @@ class PaymentService {
           });
 
           if (confirmRes.ok) {
-            // Payment confirmed, redirect to success page
-            window.location.href = '/my-courses';
+            // Payment confirmed, redirect to main site with success event
+            window.location.href = 'https://premmcxtrainingacademy.com/?event=payment_complete';
           } else {
             const errorData = await confirmRes.json();
             alert('Payment confirmation failed: ' + errorData.error);

@@ -1,6 +1,7 @@
 'use client';
 
 import { useState } from 'react';
+import Navbar from '@/components/Navbar';
 
 export default function FAQPage() {
   const [openIndex, setOpenIndex] = useState<number | null>(null);
@@ -90,7 +91,7 @@ export default function FAQPage() {
         },
         {
           q: "What if I face technical issues?",
-          a: "Our support team is available Monday to Saturday, 9 AM - 7 PM IST. Contact us via email at contact@premmcxtraining.com or call +91 7717756371. We'll resolve your issues promptly."
+          a: "Our support team is available Monday to Saturday, 9 AM - 7 PM IST. Contact us via email at premmcxtrainingacademy@gmail.com or call +91 7717756371. We'll resolve your issues promptly."
         },
         {
           q: "Do you provide mentorship or one-on-one coaching?",
@@ -127,6 +128,7 @@ export default function FAQPage() {
 
   return (
     <div className="min-h-screen bg-gradient-to-b from-slate-50 to-white">
+      <Navbar />
       {/* Hero Section */}
       <div className="bg-gradient-to-br from-indigo-600 via-purple-600 to-blue-600 text-white py-20">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">

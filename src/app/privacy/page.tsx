@@ -1,14 +1,14 @@
+import Navbar from "@/components/Navbar";
+
 export default function PrivacyPolicyPage() {
   return (
     <div className="min-h-screen bg-gradient-to-b from-slate-50 to-white">
+      <Navbar />
       {/* Hero Section */}
       <div className="bg-gradient-to-br from-indigo-600 via-purple-600 to-blue-600 text-white py-20">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="text-center">
             <h1 className="text-5xl font-bold mb-6">Privacy Policy</h1>
-            <p className="text-xl text-indigo-100 max-w-3xl mx-auto">
-              Last Updated: December 30, 2025
-            </p>
           </div>
         </div>
       </div>
@@ -261,7 +261,7 @@ export default function PrivacyPolicyPage() {
           <section>
             <h2 className="text-3xl font-bold text-gray-900 mb-4">Changes to This Privacy Policy</h2>
             <p className="text-gray-700">
-              We may update this Privacy Policy from time to time to reflect changes in our practices, technology, legal requirements, or other factors. We will notify you of material changes by posting the updated policy on our Platform and updating the "Last Updated" date. Your continued use of the Platform after such changes constitutes acceptance of the updated policy.
+              We may update this Privacy Policy from time to time to reflect changes in our practices, technology, legal requirements, or other factors. We will notify you of material changes by posting the updated policy on our Platform. Your continued use of the Platform after such changes constitutes acceptance of the updated policy.
             </p>
           </section>
 
@@ -289,8 +289,8 @@ export default function PrivacyPolicyPage() {
                 <svg className="w-6 h-6 text-indigo-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
                 </svg>
-                <a href="mailto:contact@premmcxtraining.com" className="text-indigo-600 hover:text-indigo-700 font-semibold">
-                  contact@premmcxtraining.com
+                <a href="mailto:premmcxtrainingacademy@gmail.com" className="text-indigo-600 hover:text-indigo-700 font-semibold">
+                  premmcxtrainingacademy@gmail.com
                 </a>
               </div>
               

@@ -1,5 +1,4 @@
 import Navbar from '@/components/Navbar';
-import Footer from '@/components/Footer';
 
 export const metadata = {
   title: 'Refund & Cancellation Policy | PremMCX Trading Academy',
@@ -109,8 +108,6 @@ export default function RefundPage() {
           </section>
         </div>
       </div>
-
-      <Footer />
     </div>
   );
 }

@@ -67,8 +67,8 @@ export default function CheckoutPage() {
 
       if (result.success) {
         clearCart();
-        // Redirect to payment receipt page for free enrollment
-        router.push(`/payment-receipt?orderId=free-${Date.now()}&paymentId=FREE`);
+        // Redirect to main site with success event (even for free)
+        window.location.href = 'https://premmcxtrainingacademy.com/?event=enrollment_complete';
       } else {
         throw new Error('Enrollment failed');
       }
@@ -188,8 +188,8 @@ export default function CheckoutPage() {
 
             if (result.success) {
               clearCart();
-              // Redirect to payment receipt page with transaction details
-              router.push(`/payment-receipt?orderId=${response.razorpay_order_id}&paymentId=${response.razorpay_payment_id}`);
+              // Redirect to main site with success event
+              window.location.href = 'https://premmcxtrainingacademy.com/?event=payment_complete';
             } else {
               setError('Payment verification failed');
             }

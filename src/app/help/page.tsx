@@ -2,6 +2,7 @@
 
 import { useState } from 'react';
 import Link from 'next/link';
+import Navbar from '@/components/Navbar';
 
 export default function HelpPage() {
   const [searchQuery, setSearchQuery] = useState('');
@@ -120,6 +121,7 @@ export default function HelpPage() {
 
   return (
     <div className="min-h-screen bg-gradient-to-b from-slate-50 to-white">
+      <Navbar />
       {/* Hero Section */}
       <div className="bg-gradient-to-br from-indigo-600 via-purple-600 to-blue-600 text-white py-20">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
@@ -244,7 +246,7 @@ export default function HelpPage() {
                 </div>
                 <h3 className="text-xl font-bold text-gray-900 mb-2">Email Support</h3>
                 <p className="text-gray-600 mb-4">Get help via email</p>
-                <a href="mailto:contact@premmcxtraining.com" className="text-indigo-600 hover:text-indigo-700 font-semibold">
+                <a href="mailto:premmcxtrainingacademy@gmail.com" className="text-indigo-600 hover:text-indigo-700 font-semibold">
                   premmcxtrainingacademy@gmail.com
                 </a>
               </div>
