@@ -30,70 +30,12 @@ function LoginForm() {
     callbackUrl = '/dashboard';
   }
 
-  const handleAdminLogin = async () => {
-    if (!formData.username || !formData.password) {
-      setError("Please enter your admin credentials");
-      return;
-    }
-    
-    setLoading(true);
-    setError("");
-
-    try {
-      // 1. Authenticate with Moodle directly via proxy to get a token
-      // We don't use NextAuth signIn because we don't want a session on this UI
-      const loginRes = await fetch("/api/auth/session", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          action: "moodle_token",
-          username: formData.username,
-          password: formData.password
-        })
-      });
-
-      const loginData = await loginRes.json();
-
-      if (!loginRes.ok || !loginData.token) {
-        setError(loginData.error || "Invalid admin credentials");
-        return;
-      }
-
-      // 2. Use the token to get a native Moodle autologin URL
-      const authRes = await fetch(`/api/moodle?action=autologin&token=${loginData.token}`);
-      const authData = await authRes.json();
-      
-      if (authData.ok && authData.data?.key) {
-        // 3. Construct the native autologin URL manually to bypass Moodle redirect issues
-        const moodleUrl = process.env.NEXT_PUBLIC_MOODLE_URL || "https://lms.premmcxtrainingacademy.com";
-        const baseUrl = moodleUrl.endsWith('/') ? moodleUrl.slice(0, -1) : moodleUrl;
-        
-        // Native Moodle autologin path
-        const autologinPath = "/admin/tool/mobile/autologin.php";
-        const targetUrl = `${baseUrl}/my`;
-        
-        // Construct final URL with required parameters
-        const finalUrl = `${baseUrl}${autologinPath}?userid=${loginData.userid}&key=${authData.data.key}&url=${encodeURIComponent(targetUrl)}`;
-        
-        console.log("Direct Admin Redirect:", finalUrl);
-        window.location.href = finalUrl;
-      } else {
-        // Fallback to standard Moodle login if autologin fails
-        const moodleUrl = process.env.NEXT_PUBLIC_MOODLE_URL || "https://lms.premmcxtrainingacademy.com";
-        window.location.href = `${moodleUrl}/login/index.php`;
-      }
-    } catch (err) {
-      console.error("Admin login error:", err);
-      setError("An unexpected error occurred. Please try again.");
-    } finally {
-      setLoading(false);
-    }
-  };
-
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError("");
     setLoading(true);
+
+    console.log("🔑 Login attempt with username:", formData.username);
 
     try {
       const result = await signIn("credentials", {
@@ -102,9 +44,13 @@ function LoginForm() {
         redirect: false,
       });
 
+      console.log("🔐 SignIn result:", result);
+
       if (result?.error) {
+        console.error("❌ SignIn error:", result.error);
         setError("Invalid username or password");
       } else if (result?.ok) {
+        console.log("✅ Login successful, redirecting...");
         // Check if there's a pending cart item to add after login
         const pendingItem = sessionStorage.getItem('pendingAddToCart');
         if (pendingItem) {
@@ -113,15 +59,21 @@ function LoginForm() {
             addToCart(item);
             sessionStorage.removeItem('pendingAddToCart');
             // Redirect to cart instead of callback URL if there's a pending item
+            console.log("🛒 Redirecting to cart with pending item");
             router.push('/cart');
           } catch (err) {
             console.error('Error adding pending cart item:', err);
+            console.log("📍 Redirecting to:", callbackUrl);
             router.push(callbackUrl);
           }
         } else {
+          console.log("📍 Redirecting to:", callbackUrl);
           router.push(callbackUrl);
         }
         router.refresh();
+      } else {
+        console.log("⚠️ SignIn returned but not ok, result:", result);
+        setError("Login failed. Please try again.");
       }
     } catch (error) {
       console.error("Login error:", error);
@@ -140,7 +92,7 @@ function LoginForm() {
         <div className="text-center mb-8">
           <Link href="/" className="inline-flex items-center gap-3 justify-center">
             <Image 
-              src="/logo p.png" 
+              src="/premmcx-logo.png"
               alt="PremMCX Logo" 
               width={56} 
               height={56}
@@ -255,31 +207,6 @@ function LoginForm() {
               )}
             </button>
           </form>
-
-          <div className="mt-4">
-            <button
-              onClick={handleAdminLogin}
-              disabled={loading}
-              className="w-full bg-gray-800 hover:bg-gray-900 text-white font-semibold py-3 px-4 rounded-lg shadow-md transition-all flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
-            >
-              {loading ? (
-                <span className="flex items-center justify-center gap-2">
-                  <svg className="animate-spin h-5 w-5" viewBox="0 0 24 24">
-                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none" />
-                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
-                  </svg>
-                  Verifying Admin...
-                </span>
-              ) : (
-                <>
-                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5.121 17.804A13.937 13.937 0 0112 16c2.5 0 4.847.655 6.879 1.804M15 10a3 3 0 11-6 0 3 3 0 016 0zm6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
-                  </svg>
-                  Login as Admin
-                </>
-              )}
-            </button>
-          </div>
 
           <div className="mt-6 text-center">
             <p className="text-gray-600">

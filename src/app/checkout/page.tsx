@@ -1,232 +1,42 @@
 'use client';
-/* eslint-disable @typescript-eslint/no-explicit-any */
 
 import React, { useEffect, useState } from 'react';
 import { useSession } from 'next-auth/react';
 import { useRouter } from 'next/navigation';
 import Navbar from '@/components/Navbar';
 import { useCart } from '@/context/CartContext';
-import { loadRazorpayScript } from '@/lib/razorpay';
-import { paymentService } from '@/lib/payment-service';
-
-declare global {
-  interface Window {
-    Razorpay: any;
-  }
-}
+import RazorpayPaymentForm from '@/components/RazorpayPaymentForm';
 
 export default function CheckoutPage() {
   const { data: session, status } = useSession();
   const router = useRouter();
-  const { items, clearCart, getTotalPrice } = useCart();
+  const { items, clearCart, getTotalPrice, getTotalWithGST, getGSTAmount } = useCart();
   const [processing, setProcessing] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [success, setSuccess] = useState(false);
 
   useEffect(() => {
     if (status === 'unauthenticated') {
       router.push('/auth/login?callbackUrl=/checkout');
     }
 
-    if (items.length === 0 && status === 'authenticated') {
+    if (items.length === 0 && status === 'authenticated' && !success) {
       router.push('/courses');
     }
-  }, [status, items, router]);
+  }, [status, items, router, success]);
 
-  useEffect(() => {
-    loadRazorpayScript();
-  }, []);
-
-  const handleEnrollFreeCourses = async () => {
-    setProcessing(true);
-    setError(null);
-
-    try {
-      const courseIds = items.map((i) => i.courseId);
-      
-      // For free courses, complete enrollment via Moodle's payment system with 0 amount
-      // This ensures enrollment goes through the same flow as paid courses
-      const enrollRes = await fetch('/api/payment/verify', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          orderId: `free-${Date.now()}`, // Generate unique order ID for free enrollment
-          paymentId: 'free-enrollment',
-          signature: 'free',
-          courseIds,
-          userId: session?.user?.id,
-          isFree: true, // Flag to indicate this is a free enrollment
-        }),
-      });
-
-      if (!enrollRes.ok) {
-        const errorData = await enrollRes.json();
-        throw new Error(errorData.error || 'Enrollment failed');
-      }
-
-      const result = await enrollRes.json();
-
-      if (result.success) {
-        clearCart();
-        // Redirect to main site with success event (even for free)
-        window.location.href = 'https://premmcxtrainingacademy.com/?event=enrollment_complete';
-      } else {
-        throw new Error('Enrollment failed');
-      }
-    } catch (err: unknown) {
-      if (err instanceof Error) setError(err.message);
-      else setError(String(err) || 'Failed to enroll in courses. Please try again.');
-      console.error(err);
-    } finally {
-      setProcessing(false);
-    }
+  const handlePaymentSuccess = () => {
+    setSuccess(true);
+    clearCart();
+    // Don't redirect to any LMS page - just show success message
   };
 
-  const handlePayment = async () => {
-    setProcessing(true);
-    setError(null);
-
-    try {
-      // Get payment details from Moodle backend
-      const courseIds = items.map((i) => i.courseId);
-      const totalAmount = getTotalPrice();
-      
-      // Create payment order via Moodle's backend
-      const orderRes = await fetch('/api/payment/create-order', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          courseIds,
-          amount: totalAmount * 100, // Convert to paise
-          currency: 'INR',
-          userId: session?.user?.id,
-        }),
-      });
-
-      if (!orderRes.ok) {
-        const errorData = await orderRes.json();
-        throw new Error(errorData.error || 'Failed to create order');
-      }
-
-      const { orderId, amount, currency, razorpayKeyId, directEnrollment } = await orderRes.json();
-
-      // If direct enrollment mode (no Razorpay gateway), directly process enrollment
-      if (directEnrollment) {
-        console.log('💳 Processing direct enrollment via Moodle backend...');
-        
-        const verifyRes = await fetch('/api/payment/verify', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            orderId,
-            paymentId: razorpayKeyId ? 'DIRECT_ENROLLMENT' : 'DIRECT_ENROLLMENT_NO_GATEWAY',
-            signature: razorpayKeyId ? 'DIRECT_ENROLLMENT' : 'DIRECT_ENROLLMENT_NO_GATEWAY',
-            courseIds,
-            userId: session?.user?.id,
-            isDirect: true,
-          }),
-        });
-
-        if (!verifyRes.ok) {
-          throw new Error('Enrollment failed');
-        }
-
-        const result = await verifyRes.json();
-
-        if (result.success) {
-          clearCart();
-          router.push('/my-courses?enrolled=true');
-        } else {
-          throw new Error('Enrollment failed');
-        }
-        
-        setProcessing(false);
-        return;
-      }
-      
-      // If no payment gateway configured and not direct enrollment, show error
-      if (!razorpayKeyId && !directEnrollment) {
-        setError('Payment gateway is not configured. You may need to contact the administrator or try enrolling directly through the Moodle site.');
-        setProcessing(false);
-        return;
-      }
-
-      // Initialize Razorpay with Moodle's payment details (if Razorpay is configured)
-      const options = {
-        key: razorpayKeyId,
-        amount,
-        currency,
-        name: 'Prem MCX LMS',
-        description: `Enrollment for ${items.length} course${items.length > 1 ? 's' : ''}`,
-        order_id: orderId,
-        prefill: {
-          name: session?.user?.name || '',
-          email: session?.user?.email || '',
-        },
-        theme: {
-          color: '#3B82F6',
-        },
-        handler: async function (response: any) {
-          try {
-            // Verify payment and enroll via Moodle backend
-            const verifyRes = await fetch('/api/payment/verify', {
-              method: 'POST',
-              headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({
-                orderId: response.razorpay_order_id,
-                paymentId: response.razorpay_payment_id,
-                signature: response.razorpay_signature,
-                courseIds,
-                userId: session?.user?.id,
-              }),
-            });
-
-            if (!verifyRes.ok) {
-              throw new Error('Payment verification failed');
-            }
-
-            const result = await verifyRes.json();
-
-            if (result.success) {
-              clearCart();
-              // Redirect to main site with success event
-              window.location.href = 'https://premmcxtrainingacademy.com/?event=payment_complete';
-            } else {
-              setError('Payment verification failed');
-            }
-          } catch (err) {
-            setError('Payment verification failed. Please contact support.');
-            console.error(err);
-          } finally {
-            setProcessing(false);
-          }
-        },
-        modal: {
-          ondismiss: function () {
-            setProcessing(false);
-          },
-        },
-      };
-
-      const razorpay = new window.Razorpay(options);
-      razorpay.open();
-    } catch (err: any) {
-      setError(err.message || 'Failed to initiate payment. Please try again.');
-      console.error(err);
-      setProcessing(false);
-    }
+  const handlePaymentError = (errorMsg: string) => {
+    setError(errorMsg);
+    setProcessing(false);
   };
 
-  const handleCheckout = () => {
-    const allFree = items.every((item) => !item.cost || parseFloat(item.cost) === 0);
-
-    if (allFree) {
-      handleEnrollFreeCourses();
-    } else {
-      handlePayment();
-    }
-  };
-
-  if (status === 'loading' || items.length === 0) {
+  if (status === 'loading') {
     return (
       <div className="min-h-screen bg-gray-50">
         <Navbar />
@@ -237,200 +47,166 @@ export default function CheckoutPage() {
     );
   }
 
+  if (success) {
+    return (
+      <div className="min-h-screen bg-gray-50">
+        <Navbar />
+        <div className="flex items-center justify-center min-h-[calc(100vh-80px)]">
+          <div className="max-w-md w-full text-center">
+            <div className="inline-flex items-center justify-center h-16 w-16 bg-green-100 rounded-full mb-4">
+              <svg className="h-8 w-8 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+              </svg>
+            </div>
+            <h2 className="text-2xl font-bold text-gray-900 mb-2">Payment Successful!</h2>
+            <p className="text-gray-600 mb-6">Your enrollment has been completed. You will receive a confirmation email shortly.</p>
+            
+            {/* Action Buttons */}
+            <div className="space-y-3">
+              <button
+                onClick={() => router.push('/courses')}
+                className="w-full px-6 py-3 bg-indigo-600 text-white font-semibold rounded-lg hover:bg-indigo-700 transition-colors"
+              >
+                Browse More Courses
+              </button>
+              <button
+                onClick={() => router.push('/cart')}
+                className="w-full px-6 py-3 bg-gray-200 text-gray-900 font-semibold rounded-lg hover:bg-gray-300 transition-colors"
+              >
+                Return to Cart
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
   const totalPrice = getTotalPrice();
-  const hasFreeCourses = items.some((item) => !item.cost || parseFloat(item.cost) === 0);
-  const hasPaidCourses = items.some((item) => parseFloat(item.cost || '0') > 0);
+  const coursesList = items.map((item) => ({
+    courseId: item.courseId,
+    name: item.courseName,
+    price: parseFloat(item.cost || '0'),
+  }));
 
   return (
     <div className="min-h-screen bg-gray-50">
       <Navbar />
 
-      <div className="max-w-7xl mx-auto px-4 py-12">
+      <div className="max-w-6xl mx-auto px-4 py-12">
         <div className="mb-8">
-          <h1 className="text-4xl font-bold text-gray-900 mb-2">Checkout</h1>
-          <p className="text-gray-600">Complete your enrollment</p>
+          <h1 className="text-4xl font-bold text-gray-900 mb-2">Complete Your Purchase</h1>
+          <p className="text-gray-600">Secure checkout with Razorpay and instant enrollment</p>
         </div>
 
-        {error && (
-          <div className="mb-6 p-4 bg-red-50 border border-red-200 rounded-lg">
-            <p className="text-red-700">{error}</p>
-          </div>
-        )}
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+          {/* Order Summary */}
+          <div>
+            <div className="bg-white rounded-lg shadow-lg p-8 mb-6">
+              <h2 className="text-2xl font-bold text-gray-900 mb-6">Order Summary</h2>
 
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-          {/* Order Details */}
-          <div className="lg:col-span-2">
-            <div className="bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden">
-              <div className="bg-gray-50 px-6 py-4 border-b border-gray-200">
-                <h2 className="text-xl font-bold text-gray-900">Order Details</h2>
-              </div>
-
-              <div className="divide-y divide-gray-200">
+              <div className="space-y-4 mb-6">
                 {items.map((item) => (
-                  <div key={item.courseId} className="p-6">
-                    <div className="flex justify-between items-start gap-4">
-                      <div className="flex-1">
-                        <h3 className="font-semibold text-gray-900 mb-1">{item.courseName}</h3>
-                        <p className="text-sm text-gray-600">Course</p>
-                      </div>
-                      <div className="text-right">
-                        {parseFloat(item.cost || '0') > 0 ? (
-                          <span className="text-xl font-bold text-gray-900">₹{parseFloat(item.cost).toLocaleString()}</span>
-                        ) : (
-                          <span className="text-lg font-semibold text-green-600">FREE</span>
-                        )}
-                      </div>
+                  <div key={item.courseId} className="flex justify-between items-center pb-4 border-b border-gray-200">
+                    <div>
+                      <p className="font-semibold text-gray-900">{item.courseName}</p>
+                      <p className="text-sm text-gray-600">1x Course</p>
+                    </div>
+                    <div className="text-right">
+                      {parseFloat(item.cost || '0') > 0 ? (
+                        <p className="text-lg font-bold text-gray-900">₹{parseFloat(item.cost).toLocaleString()}</p>
+                      ) : (
+                        <p className="text-lg font-bold text-green-600">FREE</p>
+                      )}
                     </div>
                   </div>
                 ))}
               </div>
+
+              {/* Tax Breakdown */}
+              {totalPrice > 0 && (
+                <div className="space-y-3 mb-6 pb-6 border-b-2 border-gray-200">
+                  <div className="flex justify-between items-center text-gray-700">
+                    <span>Subtotal:</span>
+                    <span className="font-semibold">₹{totalPrice.toLocaleString()}</span>
+                  </div>
+                  <div className="flex justify-between items-center text-gray-700">
+                    <span>SGST (9%):</span>
+                    <span className="font-semibold">₹{(totalPrice * 0.09).toLocaleString('en-IN', { maximumFractionDigits: 0 })}</span>
+                  </div>
+                  <div className="flex justify-between items-center text-gray-700">
+                    <span>CGST (9%):</span>
+                    <span className="font-semibold">₹{(totalPrice * 0.09).toLocaleString('en-IN', { maximumFractionDigits: 0 })}</span>
+                  </div>
+                  <div className="flex justify-between font-bold text-lg text-blue-600">
+                    <span>Total GST (18%):</span>
+                    <span>₹{(totalPrice * 0.18).toLocaleString('en-IN', { maximumFractionDigits: 0 })}</span>
+                  </div>
+                </div>
+              )}
+
+              <div className="pt-6">
+                <div className="flex justify-between items-center mb-2">
+                  <span className="text-xl font-bold text-gray-900">Total Amount (incl. GST):</span>
+                  <span className="text-3xl font-bold text-blue-600">
+                    ₹{(totalPrice * 1.18).toLocaleString('en-IN', { maximumFractionDigits: 0 })}
+                  </span>
+                </div>
+                {totalPrice > 0 && (
+                  <p className="text-xs text-gray-500">*GST @ 18% (9% SGST + 9% CGST)</p>
+                )}
+              </div>
+
+              {totalPrice === 0 && (
+                <div className="mt-6 p-4 bg-green-50 border border-green-200 rounded-lg">
+                  <p className="text-green-700 text-sm font-medium">✓ All courses are free! No payment required.</p>
+                </div>
+              )}
             </div>
 
             {/* Account Info */}
-            <div className="mt-6 bg-white rounded-lg shadow-sm border border-gray-200 p-6">
-              <h3 className="font-semibold text-gray-900 mb-3">Account Information</h3>
-              <div className="space-y-2">
-                <div className="flex justify-between">
-                  <span className="text-gray-600">Name:</span>
-                  <span className="font-medium text-gray-900">{session?.user?.name}</span>
+            <div className="bg-white rounded-lg shadow-lg p-8">
+              <h3 className="text-lg font-bold text-gray-900 mb-4">Enrollment Details</h3>
+              <div className="space-y-3">
+                <div>
+                  <p className="text-sm text-gray-600">Enrolling as:</p>
+                  <p className="font-semibold text-gray-900">{session?.user?.name}</p>
                 </div>
-                <div className="flex justify-between">
-                  <span className="text-gray-600">Email:</span>
-                  <span className="font-medium text-gray-900">{session?.user?.email}</span>
+                <div>
+                  <p className="text-sm text-gray-600">Email:</p>
+                  <p className="font-semibold text-gray-900">{session?.user?.email}</p>
                 </div>
               </div>
             </div>
           </div>
 
-          {/* Payment Summary */}
-          <div className="lg:col-span-1">
-            <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6 sticky top-6">
-              <h2 className="text-xl font-bold text-gray-900 mb-6">Summary</h2>
-
-              <div className="space-y-3 mb-6 pb-6 border-b border-gray-200">
-                <div className="flex justify-between text-gray-700">
-                  <span>Subtotal ({items.length} course{items.length > 1 ? 's' : ''}):</span>
-                  <span className="font-medium">₹{totalPrice.toLocaleString()}</span>
-                </div>
-                <div className="flex justify-between text-gray-700">
-                  <span>Tax:</span>
-                  <span className="font-medium">₹0</span>
-                </div>
+          {/* Payment Form */}
+          <div>
+            {error && (
+              <div className="mb-6 p-4 bg-red-50 border border-red-200 text-red-700 rounded-lg">
+                {error}
               </div>
+            )}
 
-              <div className="flex justify-between text-xl font-bold text-gray-900 mb-6">
-                <span>Total:</span>
-                <span className="text-blue-600">₹{totalPrice.toLocaleString()}</span>
+            <RazorpayPaymentForm
+              items={coursesList}
+              totalAmount={totalPrice}
+              onSuccess={handlePaymentSuccess}
+              onError={handlePaymentError}
+              isProcessing={processing}
+            />
+
+            {/* Security Badges */}
+            <div className="mt-6 grid grid-cols-2 gap-4">
+              <div className="bg-white rounded-lg p-4 text-center border border-gray-200">
+                <div className="text-2xl mb-2">🔒</div>
+                <p className="text-sm font-medium text-gray-900">Secure Checkout</p>
+                <p className="text-xs text-gray-600 mt-1">Razorpay Protected</p>
               </div>
-
-              {/* Info Messages */}
-              {hasFreeCourses && !hasPaidCourses && (
-                <div className="mb-4 p-3 bg-green-50 border border-green-200 rounded-lg">
-                  <p className="text-sm text-green-700">
-                    All courses are free! Click below to enroll instantly.
-                  </p>
-                </div>
-              )}
-
-              {hasPaidCourses && (
-                <div className="mb-4 p-3 bg-blue-50 border border-blue-200 rounded-lg">
-                  <p className="text-sm text-blue-700">
-                    Secure payment powered by Razorpay. Your data is protected.
-                  </p>
-                </div>
-              )}
-
-              {/* Checkout Button */}
-              {items.length === 1 && hasPaidCourses && !hasFreeCourses ? (
-                // For single paid course, offer both options
-                <div className="space-y-3">
-                  <button
-                    onClick={handleCheckout}
-                    disabled={processing}
-                    className={`w-full px-6 py-4 rounded-xl font-bold text-white text-lg transition-all duration-300 transform hover:scale-[1.02] active:scale-[0.98] ${
-                      processing
-                        ? 'bg-gray-400 cursor-not-allowed'
-                        : 'bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 shadow-lg hover:shadow-xl'
-                    }`}
-                  >
-                    {processing ? (
-                      <span className="flex items-center justify-center gap-2">
-                        <svg className="animate-spin h-5 w-5" viewBox="0 0 24 24">
-                          <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none" />
-                          <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
-                        </svg>
-                        Processing...
-                      </span>
-                    ) : (
-                      `Pay ₹${totalPrice.toLocaleString()} via Checkout`
-                    )}
-                  </button>
-                  
-                  <button
-                    onClick={async () => {
-                      if (items[0]) {
-                        try {
-                          const result = await paymentService.processDirectPayment({
-                            courseId: items[0].courseId,
-                            amount: parseFloat(items[0].cost) * 100, // Convert to paise
-                            currency: items[0].currency
-                          });
-                          
-                          // If payment service indicates user is not authenticated, handle it
-                          if (!result.success && result.message === 'User not authenticated') {
-                            // The payment service already redirects to login, so we don't need to do anything else
-                            return;
-                          }
-                        } catch (error) {
-                          console.error('Error processing payment:', error);
-                          router.push(`/auth/login?callbackUrl=/checkout`);
-                        }
-                      } else {
-                        router.push(`/auth/login?callbackUrl=/checkout`);
-                      }
-                    }}
-                    disabled={processing}
-                    className={`w-full px-6 py-4 rounded-xl font-bold text-white text-lg transition-all duration-300 transform hover:scale-[1.02] active:scale-[0.98] ${
-                      processing
-                        ? 'bg-gray-400 cursor-not-allowed'
-                        : 'bg-gradient-to-r from-orange-500 to-red-600 hover:from-orange-600 hover:to-red-600 shadow-lg hover:shadow-xl'
-                    }`}
-                  >
-                    Pay & Enroll Now
-                  </button>
-                </div>
-              ) : (
-                <button
-                  onClick={handleCheckout}
-                  disabled={processing}
-                  className={`w-full px-6 py-4 rounded-xl font-bold text-white text-lg transition-all duration-300 transform hover:scale-[1.02] active:scale-[0.98] ${
-                    processing
-                      ? 'bg-gray-400 cursor-not-allowed'
-                      : 'bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 shadow-lg hover:shadow-xl'
-                  }`}
-                >
-                  {processing ? (
-                    <span className="flex items-center justify-center gap-2">
-                      <svg className="animate-spin h-5 w-5" viewBox="0 0 24 24">
-                        <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none" />
-                        <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
-                      </svg>
-                      Processing...
-                    </span>
-                  ) : totalPrice === 0 ? (
-                    'Enroll Now'
-                  ) : (
-                    `Pay ₹${totalPrice.toLocaleString()}`
-                  )}
-                </button>
-              )}
-
-              {/* Security Info */}
-              <div className="mt-4 flex items-center justify-center gap-2 text-xs text-gray-500">
-                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
-                </svg>
-                <span>Secure checkout</span>
+              <div className="bg-white rounded-lg p-4 text-center border border-gray-200">
+                <div className="text-2xl mb-2">⚡</div>
+                <p className="text-sm font-medium text-gray-900">Instant Access</p>
+                <p className="text-xs text-gray-600 mt-1">Immediate Enrollment</p>
               </div>
             </div>
           </div>

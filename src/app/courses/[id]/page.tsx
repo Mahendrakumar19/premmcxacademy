@@ -1,13 +1,12 @@
 "use client";
 /* eslint-disable @typescript-eslint/no-explicit-any */
-import React, { useEffect, useState, use } from "react";
+import React, { useState, use, useCallback } from "react";
 import { useSession } from "next-auth/react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import Navbar from "@/components/Navbar";
 import { getCourseContents } from '@/lib/moodle-api';
 import { useCart } from '@/context/CartContext';
-import { paymentService } from '@/lib/payment-service';
 
 interface Course {
   id: number;
@@ -56,11 +55,7 @@ export default function CourseDetailPage({ params }: { params: Promise<{ id: str
   const [enrolled, setEnrolled] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  useEffect(() => {
-    loadCourseData();
-  }, [resolvedParams.id, session]);
-
-  const loadCourseData = async () => {
+  const loadCourseData = useCallback(async () => {
     try {
       setLoading(true);
       setError(null);
@@ -138,7 +133,7 @@ export default function CourseDetailPage({ params }: { params: Promise<{ id: str
             try {
               contents = await getCourseContents(courseId, userToken);
               if (contents && (contents as any).exception) throw new Error('User token fetch failed');
-            } catch (err) {
+            } catch (_err) {
               console.log('⚠️ User token failed, trying with course token...');
               const courseTokenResponse = await fetch(`/api/moodle?action=courseContents&id=${courseId}`, {
                 cache: 'no-store'
@@ -172,22 +167,9 @@ export default function CourseDetailPage({ params }: { params: Promise<{ id: str
     } finally {
       setLoading(false);
     }
-  };
+  }, [resolvedParams.id, session?.user, addToCart]);
 
-  const handleEnroll = async () => {
-    if (!session?.user) {
-      router.push(`/auth/login?callbackUrl=/courses/${resolvedParams.id}`);
-      return;
-    }
-
-    const courseId = parseInt(resolvedParams.id);
-
-    console.log('🎓 Starting enrollment via checkout:', { courseId, cost: course?.cost });
-
-    // Always go through checkout - enrollment happens after payment verification
-    // For free courses (cost = 0), Moodle will handle it as zero-cost enrollment
-    router.push(`/checkout?courseId=${courseId}`);
-  };
+  // Note: Enrollment is handled via checkout flow
 
   const handleContinueLearning = () => {
     router.push(`/learn/${resolvedParams.id}`);
@@ -291,14 +273,14 @@ export default function CourseDetailPage({ params }: { params: Promise<{ id: str
           </div>
 
           <div className="lg:col-span-1">
-            <div className="bg-gradient-to-br from-indigo-50 to-purple-50 rounded-2xl shadow-lg p-8 border border-indigo-100 sticky top-6">
+            <div className="bg-linear-to-br from-indigo-50 to-purple-50 rounded-2xl shadow-lg p-8 border border-indigo-100 sticky top-6">
               {/* Course Info Card */}
               <div className="mb-8">
                 <h2 className="text-2xl font-bold text-gray-900 mb-4">Course Details</h2>
                 
                 <div className="space-y-4">
                   <div className="flex items-start gap-3">
-                    <div className="flex-shrink-0">
+                    <div className="shrink-0">
                       <div className="flex items-center justify-center h-10 w-10 rounded-lg bg-indigo-600 text-white">
                         <svg className="h-6 w-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
@@ -312,7 +294,7 @@ export default function CourseDetailPage({ params }: { params: Promise<{ id: str
                   </div>
 
                   <div className="flex items-start gap-3">
-                    <div className="flex-shrink-0">
+                    <div className="shrink-0">
                       <div className="flex items-center justify-center h-10 w-10 rounded-lg bg-indigo-600 text-white">
                         <svg className="h-6 w-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
@@ -326,7 +308,7 @@ export default function CourseDetailPage({ params }: { params: Promise<{ id: str
                   </div>
 
                   <div className="flex items-start gap-3">
-                    <div className="flex-shrink-0">
+                    <div className="shrink-0">
                       <div className="flex items-center justify-center h-10 w-10 rounded-lg bg-indigo-600 text-white">
                         <svg className="h-6 w-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253" />
@@ -396,7 +378,7 @@ export default function CourseDetailPage({ params }: { params: Promise<{ id: str
                         alert('✅ Added to cart! Proceed to checkout to complete payment.');
                         router.push('/cart');
                       }}
-                      className="w-full px-6 py-4 bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700 text-white rounded-xl font-bold text-lg transition-all duration-300 shadow-lg hover:shadow-xl transform hover:-translate-y-1 flex items-center justify-center gap-2"
+                      className="w-full px-6 py-4 bg-linear-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700 text-white rounded-xl font-bold text-lg transition-all duration-300 shadow-lg hover:shadow-xl transform hover:-translate-y-1 flex items-center justify-center gap-2"
                     >
                       <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 3h2l.4 2M7 13h10l4-8H5.4M7 13L5.4 5M7 13l-2.293 2.293c-.63.63-.184 1.707.707 1.707H17m0 0a2 2 0 100 4 2 2 0 000-4zm-8 2a2 2 0 11-4 0 2 2 0 014 0z" />
@@ -406,29 +388,46 @@ export default function CourseDetailPage({ params }: { params: Promise<{ id: str
                     
                     {/* Direct purchase button for single course */}
                     <button
-                      onClick={async () => {
-                        if (course) {
-                          try {
-                            const result = await paymentService.processDirectPayment({
-                              courseId: course.id,
-                              amount: parseFloat(String(course.displayPrice || course.price || '0')) * 100, // Convert to paise
-                              currency: course.currency || 'INR'
-                            });
-                            
-                            // If payment service indicates user is not authenticated, handle it
-                            if (!result.success && result.message === 'User not authenticated') {
-                              // The payment service already redirects to login, so we don't need to do anything else
-                              return;
-                            }
-                          } catch (error) {
-                            console.error('Error processing payment:', error);
-                            router.push(`/auth/login?callbackUrl=/courses/${course?.id}`);
-                          }
-                        } else {
-                          router.push(`/auth/login?callbackUrl=/courses/${course?.id}`);
+                      onClick={() => {
+                        if (!course) return;
+                        
+                        // Check if user is logged in
+                        if (status === 'unauthenticated') {
+                          // Store the course to add after login
+                          const imageUrl = course.courseimage || 
+                                         course.imageurl || 
+                                         '/placeholder-course.jpg';
+                          
+                          sessionStorage.setItem('pendingAddToCart', JSON.stringify({
+                            courseId: course.id,
+                            courseName: course.fullname,
+                            cost: String(course.displayPrice || course.price || '0'),
+                            currency: course.currency || 'INR',
+                            thumbnailUrl: imageUrl,
+                          }));
+                          
+                          // Redirect to login
+                          router.push(`/auth/login?callbackUrl=${encodeURIComponent(`/courses/${course.id}`)}`);
+                          return;
                         }
+                        
+                        // User is logged in - add to cart and go to checkout
+                        const imageUrl = course.courseimage || 
+                                       course.imageurl || 
+                                       '/placeholder-course.jpg';
+                        
+                        addToCart({
+                          courseId: course.id,
+                          courseName: course.fullname,
+                          cost: String(course.displayPrice || course.price || '0'),
+                          currency: course.currency || 'INR',
+                          thumbnailUrl: imageUrl,
+                        });
+                        
+                        // Direct to checkout - skipping cart
+                        router.push('/checkout');
                       }}
-                      className="w-full px-6 py-4 bg-gradient-to-r from-orange-500 to-red-500 hover:from-orange-600 hover:to-red-600 text-white rounded-xl font-bold text-lg transition-all duration-300 shadow-lg hover:shadow-xl transform hover:-translate-y-1 flex items-center justify-center gap-2"
+                      className="w-full px-6 py-4 bg-linear-to-r from-orange-500 to-red-500 hover:from-orange-600 hover:to-red-600 text-white rounded-xl font-bold text-lg transition-all duration-300 shadow-lg hover:shadow-xl transform hover:-translate-y-1 flex items-center justify-center gap-2"
                     >
                       <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1" />

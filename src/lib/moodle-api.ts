@@ -5,6 +5,29 @@ const MOODLE_URL = process.env.MOODLE_URL || process.env.NEXT_PUBLIC_MOODLE_URL 
 const MOODLE_TOKEN = process.env.MOODLE_TOKEN || '';
 const MOODLE_COURSE_TOKEN = process.env.MOODLE_COURSE_TOKEN || '';
 
+// Simple in-memory cache for API calls (TTL: 5 minutes)
+const apiCache = new Map<string, { data: any; expires: number }>();
+
+function getCacheKey(wsfunction: string, params: any): string {
+  return `${wsfunction}:${JSON.stringify(params)}`;
+}
+
+function setCache(key: string, data: any, ttlSeconds: number = 300) {
+  apiCache.set(key, {
+    data,
+    expires: Date.now() + ttlSeconds * 1000
+  });
+}
+
+function getCache(key: string): any | null {
+  const cached = apiCache.get(key);
+  if (cached && cached.expires > Date.now()) {
+    return cached.data;
+  }
+  apiCache.delete(key);
+  return null;
+}
+
 interface MoodleParams {
   [key: string]: string | number | boolean;
 }
@@ -15,6 +38,16 @@ export async function callMoodleAPI(
   token?: string,
   tryFallbackToken: boolean = false
 ) {
+  // Check cache first for read operations
+  if (wsfunction.startsWith('core_') && !wsfunction.includes('create') && !wsfunction.includes('update') && !wsfunction.includes('delete')) {
+    const cacheKey = getCacheKey(wsfunction, params);
+    const cached = getCache(cacheKey);
+    if (cached) {
+      console.log(`✅ Cache hit for ${wsfunction}`);
+      return cached;
+    }
+  }
+
   // Try primary token first
   const primaryToken = token || MOODLE_COURSE_TOKEN || MOODLE_TOKEN;
   const fallbackToken = tryFallbackToken ? (MOODLE_COURSE_TOKEN && MOODLE_TOKEN && primaryToken === MOODLE_TOKEN ? MOODLE_COURSE_TOKEN : MOODLE_TOKEN) : null;
@@ -32,7 +65,11 @@ export async function callMoodleAPI(
 
     const response = await fetch(
       `${MOODLE_URL}/webservice/rest/server.php?${urlParams}`,
-      { method: 'POST' }
+      { 
+        method: 'POST',
+        // Add timeout for slow requests
+        signal: AbortSignal.timeout(30000)
+      }
     );
 
     return response.json();
@@ -46,9 +83,16 @@ export async function callMoodleAPI(
     console.log(`⚠️ Primary token failed for ${wsfunction}, trying fallback token...`);
     return makeRequest(fallbackToken);
   }
+
+  // Cache successful results
+  if (wsfunction.startsWith('core_') && !wsfunction.includes('create') && !wsfunction.includes('update') && !wsfunction.includes('delete')) {
+    const cacheKey = getCacheKey(wsfunction, params);
+    setCache(cacheKey, result, 300);
+  }
   
   return result;
 }
+
 
 // Get all available courses
 export async function getAllCourses() {

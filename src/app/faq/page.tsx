@@ -11,45 +11,45 @@ export default function FAQPage() {
       category: "Getting Started",
       questions: [
         {
-          q: "How do I enroll in a course?",
-          a: "Browse our course catalog on the homepage, select a course you're interested in, and click 'Add to Cart'. Once you've added all desired courses, proceed to checkout and complete the payment process. You'll gain instant access after enrollment."
+          q: "How do I enroll in Prem MCX courses?",
+          a: "Browse our MCX and forex trading courses on the homepage, select the courses you're interested in, add them to your cart, and proceed to checkout. You'll get instant access after payment via Razorpay."
         },
         {
-          q: "What are the prerequisites for your courses?",
-          a: "Most beginner courses require no prior knowledge. Intermediate and advanced courses may require basic understanding of trading concepts. Each course page lists specific prerequisites in the course description."
+          q: "What are the prerequisites for MCX trading courses?",
+          a: "Our beginner courses on intraday trading, option chains, and commodity trading require no prior knowledge. Advanced courses require basic understanding of trading concepts. We cover everything from basics to advanced strategies."
         },
         {
           q: "Can I access courses on mobile devices?",
-          a: "Yes! Our platform is fully responsive and works on all devices. You can also download our mobile app from the Google Play Store for an optimized mobile learning experience."
+          a: "Yes! Our platform is fully responsive and works on all devices. You can learn MCX and forex trading on the go with full access to videos, notes, and live sessions."
         },
         {
-          q: "How long do I have access to a course?",
-          a: "Once enrolled, you have lifetime access to all course materials, including future updates. You can learn at your own pace without any time restrictions."
+          q: "How long do I have access to courses?",
+          a: "Once enrolled, you have lifetime access to all course materials including 500+ hours of content. Learn at your own pace with no time restrictions and access all future updates."
         }
       ]
     },
     {
-      category: "Courses & Content",
+      category: "MCX & Trading Courses",
       questions: [
         {
-          q: "What trading topics do you cover?",
-          a: "We specialize in share and commodity market trading, with comprehensive courses on natural gas, crude oil, gold, silver, and other commodities. Our curriculum includes technical analysis, fundamental analysis, intraday price action, and risk management strategies."
+          q: "What trading topics do you specialize in?",
+          a: "We specialize in Equity, Index, MCX & Forex trading with expert guidance on intraday price action, option chain strategies, technical analysis, NIFTY/BANKNIFTY, Stock Options, Gold, Silver, Crude Oil, and Cryptocurrency trading."
         },
         {
-          q: "Are the courses live or pre-recorded?",
-          a: "We offer both! Most courses feature high-quality pre-recorded video lessons that you can watch anytime. We also conduct live webinars, interactive sessions, and Q&A sessions with expert instructors regularly."
+          q: "Do you teach option trading and option chains?",
+          a: "Yes! Our comprehensive option chain courses cover option buying, selling, spreads, Greeks, and advanced strategies for NIFTY and BANKNIFTY. We teach both theory and practical application."
         },
         {
-          q: "Do you provide certificates upon completion?",
-          a: "Yes, you'll receive a certificate of completion for each course you finish. These certificates demonstrate your commitment to learning and can be shared on LinkedIn or included in your professional portfolio."
+          q: "Are courses live or pre-recorded?",
+          a: "We offer both! Pre-recorded video lessons (500+ hours) for flexible learning plus daily live market analysis sessions, webinars, and interactive Q&A with our 3+ expert instructors."
         },
         {
-          q: "Can I download course materials?",
-          a: "Yes, most course materials including PDFs, study guides, and supplementary resources are available for download. Video lectures are streamable online to protect content integrity."
+          q: "Do you teach astrology-based trading?",
+          a: "Yes, we offer unique courses combining astrological analysis with technical analysis and price action for enhanced market timing and trading decisions."
         },
         {
-          q: "Do you offer offline classes?",
-          a: "Yes! In addition to our online courses, we offer offline classes at our training center in Gaya, Bihar. Contact us at +91 7717756371 for offline batch schedules and availability."
+          q: "Do you provide trading certificates?",
+          a: "Yes, you'll receive completion certificates for each course. These showcase your trading education and can be shared on LinkedIn or professional portfolios."
         }
       ]
     },
@@ -58,23 +58,23 @@ export default function FAQPage() {
       questions: [
         {
           q: "What payment methods do you accept?",
-          a: "We accept all major payment methods through Razorpay including credit/debit cards, net banking, UPI, and digital wallets. All transactions are secure and encrypted."
+          a: "We accept all major payment methods through Razorpay including credit/debit cards, net banking, UPI, and digital wallets. All transactions are secure and encrypted with 18% GST included."
         },
         {
           q: "Is there a refund policy?",
-          a: "Yes, we offer a 7-day money-back guarantee. If you're not satisfied with a course within the first 7 days of enrollment and have completed less than 20% of the content, you can request a full refund."
+          a: "Yes, we offer a 30-day money-back guarantee on all courses. If you're not satisfied within 30 days of enrollment, you can request a full refund with no questions asked."
         },
         {
           q: "Are there any hidden fees?",
-          a: "No hidden fees! The price you see is the price you pay. All course materials, certificates, and lifetime access are included in the enrollment fee."
+          a: "No hidden fees! The price shown includes the course, all materials, lifetime access, and certificates. GST (9% SGST + 9% CGST) is transparently shown at checkout."
         },
         {
           q: "Do you offer discounts or bundle pricing?",
-          a: "Yes! We regularly offer seasonal discounts, bundle deals, and special promotions. Subscribe to our newsletter or follow us on social media to stay updated on latest offers."
+          a: "Yes! We regularly offer seasonal discounts, bundle deals on multiple courses, and special promotions. Subscribe to our newsletter for latest offers."
         },
         {
-          q: "Can I pay in installments?",
-          a: "Currently, we require full payment at enrollment. However, we're working on introducing EMI options for premium courses. Contact us for corporate or bulk enrollment pricing."
+          q: "Do you offer bulk or corporate training?",
+          a: "Yes, we offer corporate training programs and bulk enrollment discounts for institutions and trading groups. Contact us at +91 7717756371 for corporate pricing."
         }
       ]
     },
@@ -83,19 +83,23 @@ export default function FAQPage() {
       questions: [
         {
           q: "How do I track my learning progress?",
-          a: "Your dashboard displays detailed progress tracking for each enrolled course, including completed lessons, quiz scores, and overall completion percentage. You can access it anytime from the 'My Courses' section."
+          a: "Your dashboard displays detailed progress for each course including completed lessons, quiz scores, and completion percentage. Access it anytime from 'My Courses'."
         },
         {
           q: "Can I ask questions to instructors?",
-          a: "Absolutely! Each course has a discussion forum where you can ask questions, share insights, and interact with instructors and fellow learners. Instructors typically respond within 24-48 hours."
+          a: "Yes! Each course has discussion forums where you ask questions, share trades, and interact with instructors and 32,500+ fellow traders. Instructors respond within 24 hours."
         },
         {
-          q: "What if I face technical issues?",
-          a: "Our support team is available Monday to Saturday, 9 AM - 7 PM IST. Contact us via email at premmcxtrainingacademy@gmail.com or call +91 7717756371. We'll resolve your issues promptly."
+          q: "Do you offer live trading sessions?",
+          a: "Yes! We conduct daily live market analysis sessions on NIFTY, BANKNIFTY, commodities, and forex. These include real-time price action analysis and trade setups."
         },
         {
-          q: "Do you provide mentorship or one-on-one coaching?",
-          a: "Yes, we offer personalized mentorship programs for serious traders. These include one-on-one sessions, portfolio reviews, and customized trading strategies. Contact us for mentorship program details and pricing."
+          q: "What is your customer support availability?",
+          a: "Our support team is available Monday to Saturday, 9 AM - 7 PM IST. Contact us via email at premmcxtrainingacademy@gmail.com or call +91 7717756371."
+        },
+        {
+          q: "Do you offer mentorship?",
+          a: "Yes! We offer personalized 1-on-1 mentorship for serious traders including portfolio review, customized strategies, and trade guidance. Contact us for mentorship details."
         }
       ]
     },
@@ -104,19 +108,19 @@ export default function FAQPage() {
       questions: [
         {
           q: "How do I reset my password?",
-          a: "Click on 'Forgot Password' on the login page, enter your registered email, and you'll receive password reset instructions. If you don't receive the email, check your spam folder or contact support."
+          a: "Click 'Forgot Password' on login, enter your email, and follow the reset instructions. Check spam folder if you don't receive the email."
         },
         {
-          q: "Can I change my registered email address?",
-          a: "Yes, you can update your email address from your account settings. For security reasons, you'll need to verify both your old and new email addresses."
+          q: "Can I update my account details?",
+          a: "Yes, update your email, phone, and other details from account settings. For security, you may need to verify changes."
         },
         {
           q: "What are the system requirements?",
-          a: "Our platform works on any modern web browser (Chrome, Firefox, Safari, Edge) with a stable internet connection. For best video streaming experience, we recommend at least 2 Mbps internet speed."
+          a: "Works on any modern browser (Chrome, Firefox, Safari, Edge) with stable internet. For video streaming, we recommend 2+ Mbps internet speed."
         },
         {
-          q: "Is my personal information secure?",
-          a: "Yes, we take data security very seriously. All personal information is encrypted and stored securely. We never share your data with third parties without your consent. Read our Privacy Policy for complete details."
+          q: "Is my data and payment information secure?",
+          a: "Yes, all data is encrypted and secured. Payments go through Razorpay's secure gateway. We never share data with third parties without consent. Read our Privacy Policy."
         }
       ]
     }

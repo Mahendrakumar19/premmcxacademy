@@ -21,6 +21,7 @@ export const config = {
     "/dashboard/:path*",
     "/profile/:path*",
     "/my-courses/:path*",
+    "/learn/:path*",
     "/checkout",
   ],
 };

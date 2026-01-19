@@ -10,14 +10,14 @@ export default function Footer() {
           <div className="space-y-4">
             <div className="flex items-center gap-3">
               <Image 
-                src="/logo p.png" 
+                src="/premmcx-logo.png" 
                 alt="PremMCX Logo" 
                 width={40} 
                 height={40}
                 className="rounded-full"
               />
               <div>
-                <h3 className="text-white font-bold text-lg">PremMCX</h3>
+                <h3 className="text-white font-bold text-lg">Prem Mcx</h3>
                 <p className="text-xs text-gray-400">Training Academy</p>
               </div>
             </div>
@@ -149,7 +149,7 @@ export default function Footer() {
         <div className="border-t border-gray-800 pt-8 mt-8">
           <div className="flex flex-col md:flex-row justify-between items-center gap-4">
             <p className="text-sm text-gray-400">
-              © {new Date().getFullYear()} PremMCX Training Academy. All rights reserved.
+              © {new Date().getFullYear()} Prem Mcx Training Academy. All rights reserved.
             </p>
             <div className="flex flex-wrap gap-6 justify-center">
               <Link href="/terms" className="text-sm text-gray-400 hover:text-white transition-colors">

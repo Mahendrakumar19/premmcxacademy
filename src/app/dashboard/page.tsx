@@ -292,15 +292,17 @@ function DashboardContent() {
                   href={`/learn/${course.id}`}
                   className="bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden hover:shadow-md transition-shadow"
                 >
-                  <div className="relative h-40 bg-gradient-to-br from-blue-500 to-purple-600">
+                  <div className="relative h-40 bg-linear-to-br from-blue-500 to-purple-600">
                     {course.courseimage && (
                       <img
-                        src={course.courseimage}
+                        src={(course.courseimage?.includes('lms.prem') || course.courseimage?.includes('pluginfile')) 
+                          ? `/api/proxy-image?url=${encodeURIComponent(course.courseimage)}`
+                          : course.courseimage}
                         alt={course.fullname}
                         className="w-full h-full object-cover"
                       />
                     )}
-                    <div className="absolute inset-0 bg-gradient-to-t from-black/50 to-transparent" />
+                    <div className="absolute inset-0 bg-linear-to-t from-black/50 to-transparent" />
                     <div className="absolute bottom-3 left-3 right-3">
                       <span className="inline-block px-2 py-1 bg-blue-600 text-white text-xs font-semibold rounded">
                         {course.categoryname || 'Course'}

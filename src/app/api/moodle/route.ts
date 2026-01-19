@@ -6,10 +6,9 @@ import {
   getEnrolledUsers,
   getUserGrades,
   searchCourses,
-  getCoursesWithEnrolmentInfo,
   getAutologinKey,
 } from '@/lib/moodle';
-import { getCoursePaymentInfo, getCoursesWithPaymentInfo } from '@/lib/moodle-payment';
+import { getCoursePaymentInfo } from '@/lib/moodle-payment';
 import { demoCourses, demoSiteInfo, isMoodleConfigured } from '@/lib/demo-data';
 
 /**

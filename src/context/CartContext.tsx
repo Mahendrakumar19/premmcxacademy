@@ -16,6 +16,8 @@ interface CartContextType {
   removeFromCart: (courseId: number) => void;
   clearCart: () => void;
   getTotalPrice: () => number;
+  getTotalWithGST: () => number;
+  getGSTAmount: () => number;
   getItemCount: () => number;
   isInCart: (courseId: number) => boolean;
 }
@@ -68,6 +70,16 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
     return items.reduce((total, item) => total + (parseFloat(item.cost) || 0), 0);
   };
 
+  const getGSTAmount = () => {
+    const subtotal = getTotalPrice();
+    return Math.round(subtotal * 0.18);
+  };
+
+  const getTotalWithGST = () => {
+    const subtotal = getTotalPrice();
+    return Math.round(subtotal * 1.18);
+  };
+
   const getItemCount = () => {
     return items.length;
   };
@@ -82,6 +94,8 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
     removeFromCart,
     clearCart,
     getTotalPrice,
+    getTotalWithGST,
+    getGSTAmount,
     getItemCount,
     isInCart,
   };

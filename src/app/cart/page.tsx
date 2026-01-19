@@ -6,7 +6,6 @@ import { useSession } from 'next-auth/react';
 import Navbar from '@/components/Navbar';
 import { useCart } from '@/context/CartContext';
 import Link from 'next/link';
-import { paymentService } from '@/lib/payment-service';
 
 export default function CartPage() {
   const router = useRouter();
@@ -30,33 +29,7 @@ export default function CartPage() {
     router.push('/checkout');
   };
 
-  const handleDirectMoodlePayment = async (courseId: number) => {
-    try {
-      // Find the course in cart to get price details
-      const course = items.find(item => item.courseId === courseId);
-      
-      if (!course) {
-        alert('Course not found in cart');
-        return;
-      }
-      
-      // Process direct payment using the payment service
-      const result = await paymentService.processDirectPayment({
-        courseId: course.courseId,
-        amount: parseFloat(course.cost) * 100, // Convert to paise
-        currency: course.currency
-      });
-      
-      // If payment service indicates user is not authenticated, handle it
-      if (!result.success && result.message === 'User not authenticated') {
-        // The payment service already redirects to login, so we don't need to do anything else
-        return;
-      }
-    } catch (error) {
-      console.error('Error processing payment:', error);
-      alert('An error occurred while processing your payment. Please try again.');
-    }
-  };
+
 
   const handleClearCart = () => {
     if (window.confirm('Are you sure you want to clear your cart?')) {
@@ -181,14 +154,19 @@ export default function CartPage() {
                     <span className="text-gray-600 font-medium">Subtotal:</span>
                     <span className="text-gray-900 font-semibold">₹{totalPrice.toLocaleString()}</span>
                   </div>
+                  <div className="flex justify-between mb-2">
+                    <span className="text-gray-600 font-medium">SGST (9%):</span>
+                    <span className="text-gray-900 font-semibold">₹{Math.round(totalPrice * 0.09).toLocaleString()}</span>
+                  </div>
                   <div className="flex justify-between mb-4">
-                    <span className="text-gray-600 font-medium">Tax (0%):</span>
-                    <span className="text-gray-900 font-semibold">₹0</span>
+                    <span className="text-gray-600 font-medium">CGST (9%):</span>
+                    <span className="text-gray-900 font-semibold">₹{Math.round(totalPrice * 0.09).toLocaleString()}</span>
                   </div>
                   <div className="flex justify-between text-xl font-bold border-t border-gray-100 pt-4">
-                    <span className="text-gray-900 font-semibold">Total:</span>
-                    <span className="text-indigo-600 font-bold">₹{totalPrice.toLocaleString()}</span>
+                    <span className="text-gray-900 font-semibold">Total (incl. 18% GST):</span>
+                    <span className="text-indigo-600 font-bold">₹{Math.round(totalPrice * 1.18).toLocaleString()}</span>
                   </div>
+                  <p className="text-xs text-gray-500 mt-2">*GST @ 18% (9% SGST + 9% CGST)</p>
                 </div>
 
                 {/* Info Messages */}
@@ -205,32 +183,17 @@ export default function CartPage() {
                 )}
 
                 {/* Checkout Button */}
-                {itemCount === 1 && hasPaidCourses && !hasFreeCourses ? (
-                  // For single paid course, offer direct Moodle payment option
-                  <button
-                    onClick={() => handleDirectMoodlePayment(items[0].courseId)}
-                    disabled={isEmptyCart}
-                    className={`w-full px-6 py-4 rounded-xl font-bold text-white transition-all duration-300 transform hover:scale-[1.02] active:scale-[0.98] ${
-                      isEmptyCart
-                        ? 'bg-gray-400 cursor-not-allowed'
-                        : 'bg-gradient-to-r from-orange-500 to-red-500 hover:from-orange-600 hover:to-red-600 shadow-lg hover:shadow-xl'
-                    }`}
-                  >
-                    {session?.user ? 'Pay & Enroll Now' : 'Login & Pay Now'}
-                  </button>
-                ) : (
-                  <button
-                    onClick={handleProceedToCheckout}
-                    disabled={isEmptyCart}
-                    className={`w-full px-6 py-4 rounded-xl font-bold text-white transition-all duration-300 transform hover:scale-[1.02] active:scale-[0.98] ${
-                      isEmptyCart
-                        ? 'bg-gray-400 cursor-not-allowed'
-                        : 'bg-indigo-600 hover:bg-indigo-700 shadow-lg hover:shadow-xl'
-                    }`}
-                  >
-                    {session?.user ? 'Proceed to Checkout' : 'Login & Checkout'}
-                  </button>
-                )}
+                <button
+                  onClick={handleProceedToCheckout}
+                  disabled={isEmptyCart}
+                  className={`w-full px-6 py-4 rounded-xl font-bold text-white transition-all duration-300 transform hover:scale-[1.02] active:scale-[0.98] ${
+                    isEmptyCart
+                      ? 'bg-gray-400 cursor-not-allowed'
+                      : 'bg-indigo-600 hover:bg-indigo-700 shadow-lg hover:shadow-xl'
+                  }`}
+                >
+                  {session?.user ? 'Proceed to Checkout' : 'Login & Checkout'}
+                </button>
 
                 {/* Continue Shopping */}
                 <Link

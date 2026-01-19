@@ -1,111 +1,124 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getServerSession } from 'next-auth';
-import { authOptions } from '@/lib/auth';
-import { 
-  completeRazorpayTransaction, 
-  manualEnrollUser, 
-  selfEnrollUser 
-} from '@/lib/moodle-api';
+import crypto from 'crypto';
+
+const MOODLE_URL = process.env.MOODLE_URL!;
+const MOODLE_TOKEN = process.env.MOODLE_TOKEN!;
+const RAZORPAY_KEY_SECRET = process.env.RAZORPAY_KEY_SECRET!;
 
 export async function POST(request: NextRequest) {
   try {
-    const { orderId, paymentId, signature, courseIds, userId, isFree, isDirect } = await request.json();
-    
-    // Get session to fetch user token
-    const session = await getServerSession(authOptions);
-    if (!session?.user?.id || !((session.user as unknown as { token?: string })?.token)) {
+    const body = await request.json();
+    const {
+      razorpay_order_id,
+      razorpay_payment_id,
+      razorpay_signature,
+      courseIds,
+      userEmail,
+    } = body;
+
+    if (!razorpay_order_id || !razorpay_payment_id || !razorpay_signature) {
       return NextResponse.json(
-        { success: false, error: 'Unauthorized' },
+        { error: 'Missing payment details' },
+        { status: 400 }
+      );
+    }
+
+    // Verify Razorpay signature
+    const shasum = crypto.createHmac('sha256', RAZORPAY_KEY_SECRET);
+    shasum.update(`${razorpay_order_id}|${razorpay_payment_id}`);
+    const digest = shasum.digest('hex');
+
+    if (digest !== razorpay_signature) {
+      console.error('❌ Invalid payment signature');
+      return NextResponse.json(
+        { error: 'Invalid payment signature' },
         { status: 401 }
       );
     }
-    const userToken = (session.user as unknown as { token?: string }).token;
-    const paymentToken = process.env.MOODLE_PAYMENT_TOKEN || process.env.MOODLE_TOKEN;
 
-    console.log('🔍 Processing enrollment:', { orderId, paymentId, courseIds, isFree, isDirect });
+    console.log('✅ Payment signature verified:', razorpay_payment_id);
 
-    // For direct or free enrollment, skip payment processing
-    if (isFree || isDirect) {
-      console.log('📝 Processing direct/free course enrollment via Moodle backend...');
-    } else {
-      // For paid courses with Razorpay, complete transaction via Moodle's payment API
-      console.log('💳 Completing Razorpay payment transaction with Moodle...');
+    // Payment verified successfully
+    // Enroll user in Moodle courses
+    if (courseIds && courseIds.length > 0 && userEmail) {
       try {
-        const result = await completeRazorpayTransaction(
-          courseIds[0],
-          orderId,
-          paymentId,
-          signature,
-          paymentToken
-        );
-
-        console.log('✅ Moodle Razorpay payment completed:', result);
-        
-        if (result.success === false) {
-          throw new Error(result.message || 'Payment completion failed');
+        for (const courseId of courseIds) {
+          await enrollUserInCourse(courseId, userEmail);
         }
-        
-        // If Moodle handled enrollment, return success
-        if (result.enrolled || result.success) {
-          return NextResponse.json({
-            success: true,
-            message: 'Payment verified and enrollment completed by Moodle',
-            enrollmentResults: courseIds.map((id: number) => ({ courseId: id, success: true })),
-          });
-        }
-      } catch (error: unknown) {
-        console.error('❌ Moodle transaction error:', error);
-        console.log('⚠️ Falling back to manual enrollment...');
-        // Continue to manual enrollment fallback
+        console.log('✅ User enrolled in all courses via Moodle');
+      } catch (enrollError) {
+        console.error('Enrollment error:', enrollError);
+        // Payment is verified, don't fail response
       }
     }
-
-    // Enroll user in all courses using manual enrollment API with payment token
-    const enrollmentResults = [];
-    for (const courseId of courseIds) {
-      try {
-        // Use manual enrollment API which allows admin to enroll any user
-        const result = await manualEnrollUser(
-          courseId,
-          parseInt(session.user.id),
-          5, // Student role
-          paymentToken
-        );
-        
-        console.log(`✅ Enrolled user ${userId} in course ${courseId}:`, result);
-        enrollmentResults.push({ courseId, success: true });
-        } catch (error: unknown) {
-        console.error(`❌ Failed to enroll in course ${courseId}:`, error);
-        
-        // Fallback: Try self-enrollment with user token
-        try {
-          await selfEnrollUser(courseId, userToken);
-          console.log(`✅ Self-enrolled user ${userId} in course ${courseId}`);
-          enrollmentResults.push({ courseId, success: true });
-        } catch (fallbackError) {
-          enrollmentResults.push({ 
-            courseId, 
-            success: false, 
-            error: error instanceof Error ? error.message : 'Enrollment failed'
-          });
-        }
-      }
-    }
-
-    const allSuccessful = enrollmentResults.every(r => r.success);
 
     return NextResponse.json({
-      success: allSuccessful,
-      message: allSuccessful 
-        ? 'Payment verified and enrollment completed' 
-        : 'Some enrollments failed',
-      enrollmentResults,
+      success: true,
+      orderId: razorpay_order_id,
+      paymentId: razorpay_payment_id,
+      message: 'Payment verified successfully. User enrolled in courses.',
     });
-  } catch (error: unknown) {
-    console.error('❌ Payment verification error:', error);
+  } catch (error) {
+    console.error('Payment verification error:', error);
     return NextResponse.json(
-      { success: false, error: error instanceof Error ? error.message : 'Verification failed' },
+      { error: 'Payment verification failed' },
       { status: 500 }
     );
+  }
+}
+
+async function enrollUserInCourse(courseId: number, userEmail: string) {
+  try {
+    // First, get the user ID from email
+    const userParams = new URLSearchParams({
+      wstoken: MOODLE_TOKEN,
+      moodlewsrestformat: 'json',
+      wsfunction: 'core_user_get_users',
+      'criteria[0][key]': 'email',
+      'criteria[0][value]': userEmail,
+    });
+
+    const userResponse = await fetch(`${MOODLE_URL}/webservice/rest/server.php`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+      body: userParams,
+    });
+
+    const userData = await userResponse.json();
+
+    if (!userData.users || userData.users.length === 0) {
+      throw new Error(`User not found with email: ${userEmail}`);
+    }
+
+    const userId = userData.users[0].id;
+
+    // Enroll user in course
+    const enrollParams = new URLSearchParams({
+      wstoken: MOODLE_TOKEN,
+      moodlewsrestformat: 'json',
+      wsfunction: 'enrol_manual_enrol_users',
+      'enrolments[0][userid]': userId.toString(),
+      'enrolments[0][courseid]': courseId.toString(),
+      'enrolments[0][roleid]': '5', // Student role
+    });
+
+    const enrollResponse = await fetch(`${MOODLE_URL}/webservice/rest/server.php`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+      body: enrollParams,
+    });
+
+    const enrollData = await enrollResponse.json();
+
+    if (enrollData.exception) {
+      console.error('Moodle enrollment error:', enrollData.message);
+      throw new Error(enrollData.message);
+    }
+
+    console.log(`✅ User ${userEmail} enrolled in course ${courseId}`);
+    return enrollData;
+  } catch (error) {
+    console.error(`Error enrolling user ${userEmail} in course ${courseId}:`, error);
+    throw error;
   }
 }

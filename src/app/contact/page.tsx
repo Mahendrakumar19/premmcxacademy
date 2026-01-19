@@ -38,25 +38,16 @@ export default function ContactPage() {
       <Navbar />
 
       {/* Hero Section */}
-      <section className="relative overflow-hidden bg-gradient-to-r from-blue-600 via-indigo-600 to-purple-600 py-20">
+      <section className="relative overflow-hidden bg-linear-to-r from-blue-600 via-indigo-600 to-purple-600 py-20">
         <div className="absolute inset-0 bg-[url('/grid.svg')] opacity-10"></div>
-        <div className="absolute inset-0 bg-gradient-to-t from-black/20 to-transparent"></div>
+        <div className="absolute inset-0 bg-linear-to-t from-black/20 to-transparent"></div>
         
         <div className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
-          <div className="flex justify-center mb-6">
-            <img 
-              src="/logo p.png" 
-              alt="PremMCX Training Academy Logo" 
-              width={120} 
-              height={120} 
-              className="rounded-full border-4 border-white/20 shadow-lg"
-            />
-          </div>
           <h1 className="text-5xl md:text-6xl font-bold text-white mb-6 leading-tight">
             Get In <span className="text-yellow-300">Touch</span>
           </h1>
           <p className="text-xl md:text-2xl text-blue-100 max-w-3xl mx-auto leading-relaxed">
-            Have questions about our courses? We&apos;re here to help you start your trading journey.
+            Questions about our MCX trading courses? Our expert team is ready to guide you through your trading journey.
           </p>
         </div>
       </section>

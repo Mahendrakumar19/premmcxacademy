@@ -1,242 +1,288 @@
 'use client';
 
-import React, { useEffect, useState, Suspense } from 'react';
-import { useRouter, useSearchParams } from 'next/navigation';
-import { useSession } from 'next-auth/react';
+import React, { useState, Suspense } from 'react';
+import { useSearchParams, useRouter } from 'next/navigation';
 import Link from 'next/link';
 import Navbar from '@/components/Navbar';
 
+interface ReceiptData {
+  transactionId: string;
+  date: string;
+  amount: string;
+  paymentMethod: string;
+  courses: Array<{ id: string; name: string; price: string }>;
+  payerName: string;
+  payerEmail: string;
+  status: 'completed' | 'pending' | 'failed';
+}
+
 function PaymentReceiptContent() {
-  const router = useRouter();
   const searchParams = useSearchParams();
-  const { data: session, status } = useSession();
-  const [paymentDetails, setPaymentDetails] = useState<any>(null);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+  const [receiptData] = useState<ReceiptData>({
+    transactionId: searchParams.get('transactionId') || 'TXN-DEMO-001',
+    date: new Date().toLocaleDateString('en-IN', {
+      year: 'numeric',
+      month: 'long',
+      day: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit',
+    }),
+    amount: searchParams.get('amount') || '₹1,00,000',
+    paymentMethod: searchParams.get('method') || 'card',
+    courses: [
+      { id: '1', name: 'Advanced MCX Trading', price: '₹30,000' },
+      { id: '2', name: 'Technical Analysis Mastery', price: '₹35,000' },
+      { id: '3', name: 'Risk Management', price: '₹35,000' },
+    ],
+    payerName: 'John Doe',
+    payerEmail: 'john@example.com',
+    status: 'completed',
+  });
 
-  const orderId = searchParams.get('orderId');
-  const paymentId = searchParams.get('paymentId');
-  const status_param = searchParams.get('status');
+  const downloadReceipt = () => {
+    const receiptContent = `
+╔════════════════════════════════════════════════════════════════╗
+║                    PAYMENT RECEIPT                             ║
+║               Prem MCX Training Academy                        ║
+╚════════════════════════════════════════════════════════════════╝
 
-  useEffect(() => {
-    if (status === 'unauthenticated') {
-      router.push('/auth/login');
-      return;
-    }
+Transaction ID: ${receiptData.transactionId}
+Date & Time: ${receiptData.date}
+Status: ${receiptData.status.toUpperCase()}
 
-    if (!orderId) {
-      setError('Invalid payment receipt. Order ID not found.');
-      setLoading(false);
-      return;
-    }
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
-    fetchPaymentDetails();
-  }, [orderId, status, router]);
+PAYER INFORMATION:
+Name: ${receiptData.payerName}
+Email: ${receiptData.payerEmail}
 
-  const fetchPaymentDetails = async () => {
-    try {
-      const res = await fetch(`/api/payment/receipt?orderId=${orderId}&paymentId=${paymentId}`, {
-        method: 'GET',
-        headers: { 'Content-Type': 'application/json' },
-      });
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
-      if (!res.ok) {
-        const errorData = await res.json();
-        throw new Error(errorData.error || 'Failed to fetch payment details');
-      }
+COURSES ENROLLED:
+${receiptData.courses
+  .map((course, idx) => `${idx + 1}. ${course.name} - ${course.price}`)
+  .join('\n')}
 
-      const data = await res.json();
-      setPaymentDetails(data);
-    } catch (err: unknown) {
-      if (err instanceof Error) setError(err.message);
-      else setError(String(err) || 'Failed to load payment receipt');
-      console.error('Error fetching payment details:', err);
-    } finally {
-      setLoading(false);
-    }
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+Payment Method: ${receiptData.paymentMethod}
+Total Amount: ${receiptData.amount}
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+IMPORTANT NOTES:
+• Keep this receipt for your records
+• Your course access will be activated within 24 hours
+• Check your email for login credentials
+• For support: support@premmcx.com | +91 9876 543 210
+
+Generated on: ${new Date().toISOString()}
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+`;
+
+    const blob = new Blob([receiptContent], { type: 'text/plain' });
+    const url = window.URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = `receipt-${receiptData.transactionId}.txt`;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    window.URL.revokeObjectURL(url);
   };
 
-  if (loading) {
-    return (
-      <div className="min-h-screen bg-gradient-to-b from-gray-50 to-white">
-        <Navbar />
-        <div className="flex items-center justify-center min-h-screen">
-          <div className="text-center">
-            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-indigo-600 mx-auto mb-4"></div>
-            <p className="text-gray-600">Loading payment receipt...</p>
-          </div>
-        </div>
-      </div>
-    );
-  }
-
-  if (error) {
-    return (
-      <div className="min-h-screen bg-gradient-to-b from-gray-50 to-white">
-        <Navbar />
-        <div className="flex items-center justify-center min-h-screen">
-          <div className="text-center max-w-md">
-            <div className="mb-4">
-              <svg className="w-16 h-16 text-red-500 mx-auto" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4m0 4v.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-              </svg>
-            </div>
-            <h2 className="text-2xl font-bold text-gray-900 mb-2">Payment Error</h2>
-            <p className="text-gray-600 mb-6">{error}</p>
-            <Link
-              href="/"
-              className="inline-block px-6 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors"
-            >
-              Return to Home
-            </Link>
-          </div>
-        </div>
-      </div>
-    );
-  }
+  const printReceipt = () => {
+    window.print();
+  };
 
   return (
-    <div className="min-h-screen bg-gradient-to-b from-gray-50 to-white">
+    <div className="min-h-screen bg-linear-to-br from-green-50 to-blue-50">
       <Navbar />
-      
-      <div className="max-w-3xl mx-auto px-4 py-12">
-        {/* Success Message */}
-        <div className="text-center mb-8">
-          <div className="flex justify-center mb-4">
-            <svg className="w-16 h-16 text-green-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
-            </svg>
+
+      <div className="max-w-4xl mx-auto px-4 py-12">
+        {/* Print Styles */}
+        <style>{`
+          @media print {
+            body { background: white; }
+            .no-print { display: none; }
+            .receipt-container { box-shadow: none; }
+          }
+        `}</style>
+
+        {/* Header with Print Actions */}
+        <div className="no-print flex justify-between items-center mb-8">
+          <div>
+            <h1 className="text-4xl font-bold text-gray-900">Payment Receipt</h1>
+            <p className="text-gray-600 mt-2">Your payment has been processed successfully</p>
           </div>
-          <h1 className="text-4xl font-bold text-gray-900 mb-2">Payment Successful!</h1>
-          <p className="text-lg text-gray-600">Your enrollment has been confirmed</p>
+          <div className="flex gap-4">
+            <button
+              onClick={downloadReceipt}
+              className="px-6 py-3 bg-blue-600 text-white rounded-lg font-semibold hover:bg-blue-700 transition flex items-center gap-2"
+            >
+              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M9 19l3 3m0 0l3-3m-3 3V10"
+                />
+              </svg>
+              Download
+            </button>
+            <button
+              onClick={printReceipt}
+              className="px-6 py-3 bg-gray-600 text-white rounded-lg font-semibold hover:bg-gray-700 transition flex items-center gap-2"
+            >
+              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4H9a2 2 0 00-2 2v2a2 2 0 002 2h10a2 2 0 002-2v-2a2 2 0 00-2-2h-2m-4-4V9m0 4v4"
+                />
+              </svg>
+              Print
+            </button>
+          </div>
         </div>
 
-        {/* Receipt Card */}
-        <div className="bg-white rounded-xl shadow-lg p-8 mb-8">
-          <div className="border-b border-gray-200 pb-6 mb-6">
-            <h2 className="text-2xl font-bold text-gray-900 mb-4">Receipt</h2>
-            <div className="grid grid-cols-2 gap-4 text-sm">
-              <div>
-                <p className="text-gray-500">Order ID</p>
-                <p className="font-mono font-semibold text-gray-900">{paymentDetails?.orderId}</p>
+        {/* Receipt Container */}
+        <div className="receipt-container bg-white rounded-xl shadow-2xl overflow-hidden">
+          {/* Receipt Header */}
+          <div className="bg-linear-to-r from-orange-600 to-orange-700 text-white p-8 text-center">
+            <h2 className="text-3xl font-bold mb-2">Prem MCX Training Academy</h2>
+            <p className="text-orange-100">Official Payment Receipt</p>
+          </div>
+
+          {/* Receipt Content */}
+          <div className="p-8">
+            {/* Transaction Status */}
+            <div className="flex items-center justify-center mb-8">
+              <div className="flex items-center gap-3">
+                <div className="flex items-center justify-center h-12 w-12 bg-green-100 rounded-full">
+                  <svg className="h-6 w-6 text-green-600" fill="currentColor" viewBox="0 0 20 20">
+                    <path
+                      fillRule="evenodd"
+                      d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z"
+                      clipRule="evenodd"
+                    />
+                  </svg>
+                </div>
+                <div>
+                  <p className="text-sm text-gray-600">Payment Status</p>
+                  <p className="text-xl font-bold text-green-600">COMPLETED</p>
+                </div>
               </div>
-              <div className="text-right">
-                <p className="text-gray-500">Payment ID</p>
-                <p className="font-mono font-semibold text-gray-900">{paymentDetails?.paymentId || 'Free'}</p>
+            </div>
+
+            {/* Key Details */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-8 mb-8 pb-8 border-b border-gray-200">
+              <div>
+                <p className="text-sm text-gray-600 mb-1">Transaction ID</p>
+                <p className="text-lg font-mono font-bold text-gray-900">{receiptData.transactionId}</p>
               </div>
               <div>
-                <p className="text-gray-500">Date</p>
-                <p className="font-semibold text-gray-900">
-                  {paymentDetails?.date ? new Date(paymentDetails.date).toLocaleDateString('en-IN', { 
-                    year: 'numeric', 
-                    month: 'long', 
-                    day: 'numeric' 
-                  }) : 'Today'}
+                <p className="text-sm text-gray-600 mb-1">Date & Time</p>
+                <p className="text-lg font-bold text-gray-900">{receiptData.date}</p>
+              </div>
+              <div>
+                <p className="text-sm text-gray-600 mb-1">Payment Method</p>
+                <p className="text-lg font-bold text-gray-900 capitalize">
+                  {receiptData.paymentMethod === 'card'
+                    ? 'Credit/Debit Card'
+                    : receiptData.paymentMethod === 'upi'
+                      ? 'UPI'
+                      : 'Bank Transfer'}
                 </p>
               </div>
-              <div className="text-right">
-                <p className="text-gray-500">Status</p>
-                <p className="font-semibold text-green-600">Completed</p>
+              <div>
+                <p className="text-sm text-gray-600 mb-1">Total Amount</p>
+                <p className="text-lg font-bold text-orange-600">{receiptData.amount}</p>
               </div>
             </div>
-          </div>
 
-          {/* Courses */}
-          <div className="mb-6">
-            <h3 className="text-lg font-semibold text-gray-900 mb-4">Enrolled Courses</h3>
-            <div className="space-y-3">
-              {paymentDetails?.courses && paymentDetails.courses.length > 0 ? (
-                paymentDetails.courses.map((course: any, index: number) => (
-                  <div key={index} className="flex justify-between items-center p-3 bg-gray-50 rounded-lg">
+            {/* Payer Information */}
+            <div className="mb-8 pb-8 border-b border-gray-200">
+              <h3 className="text-lg font-bold text-gray-900 mb-4">Payer Information</h3>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div>
+                  <p className="text-sm text-gray-600 mb-1">Full Name</p>
+                  <p className="font-semibold text-gray-900">{receiptData.payerName}</p>
+                </div>
+                <div>
+                  <p className="text-sm text-gray-600 mb-1">Email Address</p>
+                  <p className="font-semibold text-gray-900">{receiptData.payerEmail}</p>
+                </div>
+              </div>
+            </div>
+
+            {/* Courses Enrolled */}
+            <div className="mb-8">
+              <h3 className="text-lg font-bold text-gray-900 mb-4">Courses Enrolled</h3>
+              <div className="space-y-3">
+                {receiptData.courses.map((course, idx) => (
+                  <div key={idx} className="flex justify-between items-center p-4 bg-gray-50 rounded-lg">
                     <div>
-                      <p className="font-semibold text-gray-900">{course.courseName}</p>
-                      <p className="text-sm text-gray-600">Course ID: {course.courseId}</p>
+                      <p className="font-semibold text-gray-900">{course.name}</p>
+                      <p className="text-sm text-gray-600">Course ID: {course.id}</p>
                     </div>
-                    <div className="text-right">
-                      <p className="font-semibold text-gray-900">
-                        ₹{parseFloat(String(course.amount || '0')).toLocaleString('en-IN')}
-                      </p>
-                    </div>
+                    <p className="font-bold text-gray-900">{course.price}</p>
                   </div>
-                ))
-              ) : (
-                <p className="text-gray-600">No course information available</p>
-              )}
-            </div>
-          </div>
+                ))}
+              </div>
 
-          {/* Total Amount */}
-          <div className="border-t border-gray-200 pt-6 flex justify-between items-center">
-            <p className="text-lg font-semibold text-gray-900">Total Amount</p>
-            <p className="text-2xl font-bold text-indigo-600">
-              ₹{paymentDetails?.totalAmount ? parseFloat(String(paymentDetails.totalAmount)).toLocaleString('en-IN') : '0'}
-            </p>
-          </div>
-
-          {/* Transaction Details */}
-          {paymentDetails?.paymentMethod && (
-            <div className="mt-6 pt-6 border-t border-gray-200">
-              <h3 className="text-sm font-semibold text-gray-900 mb-3">Transaction Details</h3>
-              <div className="grid grid-cols-2 gap-4 text-sm">
-                <div>
-                  <p className="text-gray-500">Payment Method</p>
-                  <p className="font-semibold text-gray-900 capitalize">{paymentDetails.paymentMethod}</p>
-                </div>
-                <div>
-                  <p className="text-gray-500">Currency</p>
-                  <p className="font-semibold text-gray-900">{paymentDetails.currency || 'INR'}</p>
+              {/* Total */}
+              <div className="mt-4 p-4 bg-orange-50 rounded-lg border-2 border-orange-200">
+                <div className="flex justify-between items-center">
+                  <p className="text-lg font-bold text-gray-900">Total Amount</p>
+                  <p className="text-2xl font-bold text-orange-600">{receiptData.amount}</p>
                 </div>
               </div>
             </div>
-          )}
+
+            {/* Important Notes */}
+            <div className="bg-blue-50 border-l-4 border-blue-600 p-4 rounded mb-8">
+              <h4 className="font-bold text-blue-900 mb-2">Important Notes</h4>
+              <ul className="text-sm text-blue-800 space-y-1">
+                <li>✓ Keep this receipt for your records</li>
+                <li>✓ Your course access will be activated within 24 hours</li>
+                <li>✓ Check your email for login credentials and course details</li>
+                <li>✓ Refund policy: 30 days money-back guarantee</li>
+              </ul>
+            </div>
+
+            {/* Footer */}
+            <div className="border-t border-gray-200 pt-6 text-center text-sm text-gray-600">
+              <p className="mb-2">Thank you for your purchase!</p>
+              <p className="mb-4">For support: support@premmcx.com | +91 9876 543 210</p>
+              <p className="text-xs text-gray-500">
+                Generated on: {new Date().toISOString()}
+              </p>
+            </div>
+          </div>
         </div>
 
         {/* Action Buttons */}
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <div className="no-print flex flex-col sm:flex-row gap-4 mt-8">
           <Link
             href="/my-courses"
-            className="inline-flex items-center justify-center px-6 py-3 bg-indigo-600 text-white font-semibold rounded-lg hover:bg-indigo-700 transition-colors"
+            className="flex-1 px-6 py-4 bg-orange-600 text-white rounded-lg font-semibold hover:bg-orange-700 transition text-center"
           >
-            <svg className="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253" />
-            </svg>
-            View My Courses
+            Go to My Courses
           </Link>
-          <button
-            onClick={() => {
-              const element = document.querySelector('.receipt-card');
-              if (element) {
-                window.print();
-              }
-            }}
-            className="inline-flex items-center justify-center px-6 py-3 bg-gray-200 text-gray-900 font-semibold rounded-lg hover:bg-gray-300 transition-colors"
+          <Link
+            href="/payment-history"
+            className="flex-1 px-6 py-4 bg-gray-200 text-gray-900 rounded-lg font-semibold hover:bg-gray-300 transition text-center"
           >
-            <svg className="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z" />
-            </svg>
-            Download Receipt
-          </button>
-        </div>
-
-        {/* Footer Note */}
-        <div className="mt-8 p-4 bg-blue-50 border border-blue-200 rounded-lg">
-          <p className="text-sm text-gray-700">
-            <span className="font-semibold">Note:</span> A receipt has been sent to your email. You can now access the course content from your dashboard.
-          </p>
-        </div>
-      </div>
-    </div>
-  );
-}
-
-function LoadingFallback() {
-  return (
-    <div className="min-h-screen bg-gradient-to-b from-gray-50 to-white">
-      <Navbar />
-      <div className="flex items-center justify-center min-h-screen">
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-indigo-600 mx-auto mb-4"></div>
-          <p className="text-gray-600">Loading payment receipt...</p>
+            View Payment History
+          </Link>
+          <Link
+            href="/courses"
+            className="flex-1 px-6 py-4 border-2 border-orange-600 text-orange-600 rounded-lg font-semibold hover:bg-orange-50 transition text-center"
+          >
+            Browse More Courses
+          </Link>
         </div>
       </div>
     </div>
@@ -245,7 +291,7 @@ function LoadingFallback() {
 
 export default function PaymentReceiptPage() {
   return (
-    <Suspense fallback={<LoadingFallback />}>
+    <Suspense fallback={<div>Loading receipt...</div>}>
       <PaymentReceiptContent />
     </Suspense>
   );

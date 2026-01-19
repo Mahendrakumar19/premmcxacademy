@@ -1,45 +1,95 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getServerSession } from 'next-auth/next';
-import { authOptions } from '@/lib/auth';
+
+// In production, fetch this from database
+// For now, we'll retrieve from Razorpay
+const RAZORPAY_KEY_ID = process.env.RAZORPAY_KEY_ID!;
+const RAZORPAY_KEY_SECRET = process.env.RAZORPAY_KEY_SECRET!;
 
 export async function GET(request: NextRequest) {
   try {
-    const session = await getServerSession(authOptions);
-    
-    if (!session) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    const { searchParams } = new URL(request.url);
+    const orderId = searchParams.get('orderId');
+    const paymentId = searchParams.get('paymentId');
+
+    if (!orderId || !paymentId) {
+      return NextResponse.json(
+        { error: 'Missing order or payment ID' },
+        { status: 400 }
+      );
     }
 
-    const orderId = request.nextUrl.searchParams.get('orderId');
-    const paymentId = request.nextUrl.searchParams.get('paymentId');
+    // Fetch payment details from Razorpay
+    const authHeader = Buffer.from(`${RAZORPAY_KEY_ID}:${RAZORPAY_KEY_SECRET}`).toString('base64');
 
-    if (!orderId) {
-      return NextResponse.json({ error: 'Order ID is required' }, { status: 400 });
+    const paymentResponse = await fetch(`https://api.razorpay.com/v1/payments/${paymentId}`, {
+      method: 'GET',
+      headers: {
+        Authorization: `Basic ${authHeader}`,
+      },
+    });
+
+    if (!paymentResponse.ok) {
+      throw new Error('Failed to fetch payment details from Razorpay');
     }
 
-    // In a real application, you would fetch this from your database
-    // For now, we'll construct it from session data
-    // This is a simplified version - you should store payment details in a database
+    const paymentData = await paymentResponse.json();
 
-    const receiptData = {
+    // Fetch order details
+    const orderResponse = await fetch(`https://api.razorpay.com/v1/orders/${orderId}`, {
+      method: 'GET',
+      headers: {
+        Authorization: `Basic ${authHeader}`,
+      },
+    });
+
+    if (!orderResponse.ok) {
+      throw new Error('Failed to fetch order details from Razorpay');
+    }
+
+    const orderData = await orderResponse.json();
+
+    // Extract course information from order notes
+    const courseIds = orderData.notes?.courseIds
+      ? orderData.notes.courseIds.split(',').map((id: string) => parseInt(id.trim()))
+      : [];
+    const userEmail = orderData.notes?.userEmail || '';
+    const userName = orderData.notes?.userName || '';
+
+    // For now, create mock course data
+    // In production, fetch actual course details from database
+    const courses = courseIds.map((id: number) => ({
+      id,
+      name: `Course ${id}`,
+      price: Math.round(orderData.amount / 100 / courseIds.length),
+    }));
+
+    const subtotal = Math.round(orderData.amount / 100 / 1.18);
+    const gst = Math.round(subtotal * 0.18);
+    const total = Math.round(orderData.amount / 100);
+
+    return NextResponse.json({
       orderId,
-      paymentId: paymentId || 'FREE',
-      date: new Date().toISOString(),
-      status: 'completed',
-      userId: session.user?.id,
-      userName: session.user?.name,
-      userEmail: session.user?.email,
-      courses: [], // This should be fetched from your database
-      totalAmount: 0,
-      currency: 'INR',
-      paymentMethod: paymentId ? 'Online' : 'Free Enrollment',
-    };
-
-    return NextResponse.json(receiptData);
+      paymentId,
+      date: new Date(paymentData.created_at * 1000).toLocaleDateString('en-IN', {
+        year: 'numeric',
+        month: 'long',
+        day: 'numeric',
+        hour: '2-digit',
+        minute: '2-digit',
+      }),
+      subtotal,
+      gst,
+      total,
+      courses,
+      userEmail,
+      userName,
+      status: paymentData.status === 'captured' ? 'completed' : paymentData.status,
+      razorpaySignature: paymentData.id,
+    });
   } catch (error) {
-    console.error('Error fetching receipt:', error);
+    console.error('Receipt fetch error:', error);
     return NextResponse.json(
-      { error: 'Failed to fetch payment receipt' },
+      { error: 'Failed to fetch receipt details' },
       { status: 500 }
     );
   }

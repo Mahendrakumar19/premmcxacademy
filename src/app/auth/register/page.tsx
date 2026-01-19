@@ -119,7 +119,7 @@ export default function RegisterPage() {
         <div className="text-center mb-8">
           <Link href="/" className="inline-flex items-center gap-3 justify-center">
             <Image 
-              src="/logo p.png" 
+              src="/premmcx-logo.png" 
               alt="PremMCX Logo" 
               width={56} 
               height={56}

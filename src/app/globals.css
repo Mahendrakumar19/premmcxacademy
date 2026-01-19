@@ -316,3 +316,36 @@ html {
   background-color: #f9fafb;
 }
 
+/* Video content styles for embedded videos in page modules */
+.video-content video,
+.video-content iframe {
+  max-width: 100%;
+  width: 100%;
+  height: auto;
+  border-radius: 0.5rem;
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+}
+
+.video-content iframe {
+  min-height: 400px;
+  aspect-ratio: 16 / 9;
+}
+
+/* Responsive video container */
+.video-content .video-container {
+  position: relative;
+  width: 100%;
+  padding-bottom: 56.25%; /* 16:9 aspect ratio */
+  height: 0;
+  overflow: hidden;
+}
+
+.video-content .video-container iframe,
+.video-content .video-container video {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+}
+

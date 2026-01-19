@@ -5,7 +5,6 @@ import Navbar from '@/components/Navbar';
 import { useCart } from '@/context/CartContext';
 import { useRouter } from 'next/navigation';
 import { useSession } from 'next-auth/react';
-import Image from 'next/image';
 
 interface Course {
   id: number;
@@ -95,10 +94,15 @@ export default function HomePage() {
   });
 
   const handleAddToCart = (course: Course) => {
-    const imageUrl = course.courseimage || 
+    const rawImageUrl = course.courseimage || 
                      course.imageurl || 
                      course.overviewfiles?.[0]?.fileurl || 
                      '/placeholder-course.jpg';
+    
+    // If it's a Moodle image URL, use the proxy
+    const imageUrl = (rawImageUrl?.includes('lms.prem') || rawImageUrl?.includes('pluginfile')) 
+      ? `/api/proxy-image?url=${encodeURIComponent(rawImageUrl)}`
+      : rawImageUrl;
     
     // Check if user is logged in
     if (status === 'unauthenticated') {
@@ -127,13 +131,13 @@ export default function HomePage() {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-white to-blue-50">
+    <div className="min-h-screen bg-linear-to-br from-slate-50 via-white to-blue-50">
       <Navbar />
 
       {/* Hero Section */}
-      <section className="relative overflow-hidden bg-gradient-to-r from-blue-600 via-indigo-600 to-purple-600 py-20">
+      <section className="relative overflow-hidden bg-linear-to-r from-blue-600 via-indigo-600 to-purple-600 py-20">
         <div className="absolute inset-0 bg-[url('/grid.svg')] opacity-10"></div>
-        <div className="absolute inset-0 bg-gradient-to-t from-black/20 to-transparent"></div>
+        <div className="absolute inset-0 bg-linear-to-t from-black/20 to-transparent"></div>
         
         <div className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="text-center">
@@ -141,16 +145,16 @@ export default function HomePage() {
               <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
                 <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z" />
               </svg>
-              <span>India&apos;s #1 MCX Trading Academy</span>
+              <span>Leading MCX & Forex Trading Academy in India</span>
             </div>
             
             <h1 className="text-5xl md:text-6xl lg:text-7xl font-bold text-white mb-6 leading-tight">
-              Master MCX Trading
+              Master Equity, Index, MCX & Forex Trading
               <span className="block text-yellow-300">With Expert Guidance</span>
             </h1>
             
-            <p className="text-xl md:text-2xl text-blue-100 mb-8 max-w-3xl mx-auto leading-relaxed">
-              Master share and commodity trading with expert guidance on natural gas, crude oil, gold, and silver through our proven intraday price action courses and live market analysis.
+            <p className="text-lg md:text-xl text-blue-100 mb-8 max-w-4xl mx-auto leading-relaxed">
+              Learn share market trading, commodity trading, and option strategies on NIFTY, BANK NIFTY, Stock Options, Gold, Silver, Crude Oil, and Crypto. Master intraday price action, technical analysis, option chain strategies, and astrology-based trading through our proven courses and live market analysis.
             </p>
             
             <div className="flex flex-col sm:flex-row gap-4 justify-center items-center mb-12">
@@ -177,10 +181,10 @@ export default function HomePage() {
             {/* Stats */}
             <div className="grid grid-cols-2 md:grid-cols-4 gap-6 max-w-4xl mx-auto">
               {[
-                { label: 'Active Students', value: '10,000+' },
-                { label: 'Expert Instructors', value: '50+' },
-                { label: 'Course Hours', value: '5,000+' },
-                { label: 'Success Rate', value: '95%' },
+                { label: 'Active Students', value: '32,500+' },
+                { label: 'Expert Instructors', value: '3+' },
+                { label: 'Course Hours', value: '500+' },
+                { label: 'Success Rate', value: '99%' },
               ].map((stat, idx) => (
                 <div key={idx} className="bg-white/10 backdrop-blur-md rounded-xl p-4 border border-white/20">
                   <div className="text-3xl font-bold text-white mb-1">{stat.value}</div>
@@ -299,7 +303,7 @@ export default function HomePage() {
                   className="group bg-white rounded-2xl shadow-md hover:shadow-2xl transition-all duration-300 overflow-hidden border border-gray-100 hover:border-indigo-200 transform hover:-translate-y-2"
                 >
                   {/* Course Header Gradient */}
-                  <div className="relative h-48 bg-gradient-to-br from-indigo-500 via-purple-500 to-pink-500 overflow-hidden">
+                  <div className="relative h-48 bg-linear-to-br from-indigo-500 via-purple-500 to-pink-500 overflow-hidden">
                     <div className="w-full h-full flex items-center justify-center">
                       <svg className="w-24 h-24 text-white/30" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253" />
@@ -399,7 +403,7 @@ export default function HomePage() {
       </section>
 
       {/* CTA Section */}
-      <section className="py-20 bg-gradient-to-r from-indigo-600 to-purple-600">
+      <section className="py-20 bg-linear-to-r from-indigo-600 to-purple-600">
         <div className="max-w-4xl mx-auto px-4 text-center">
           <h2 className="text-4xl font-bold text-white mb-6">Ready to Start Your Trading Journey?</h2>
           <p className="text-xl text-indigo-100 mb-8">

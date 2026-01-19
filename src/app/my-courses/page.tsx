@@ -1,6 +1,5 @@
 "use client";
-/* eslint-disable @typescript-eslint/no-explicit-any */
-import React, { useEffect, useState, Suspense } from "react";
+import React, { useEffect, useState, Suspense, useCallback } from "react";
 import { useSession } from "next-auth/react";
 import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
@@ -24,22 +23,7 @@ function MyCoursesContent() {
   const [loading, setLoading] = useState(true);
   const [showEnrolledMessage, setShowEnrolledMessage] = useState(false);
 
-  useEffect(() => {
-    if (status === 'unauthenticated') {
-      router.push('/auth/login?callbackUrl=/my-courses');
-      return;
-    }
-    if (session?.user) {
-      loadCourses();
-      const enrolled = searchParams.get('enrolled');
-      if (enrolled === 'true') {
-        setShowEnrolledMessage(true);
-        setTimeout(() => setShowEnrolledMessage(false), 5000);
-      }
-    }
-  }, [status, session, router, searchParams]);
-
-  const loadCourses = async () => {
+  const loadCourses = useCallback(async () => {
     try {
       setLoading(true);
       const userId = (session?.user as unknown as { id?: number })?.id;
@@ -60,7 +44,22 @@ function MyCoursesContent() {
     } finally {
       setLoading(false);
     }
-  };
+  }, [session?.user]);
+
+  useEffect(() => {
+    if (status === 'unauthenticated') {
+      router.push('/auth/login?callbackUrl=/my-courses');
+      return;
+    }
+    if (session?.user) {
+      loadCourses();
+      const enrolled = searchParams.get('enrolled');
+      if (enrolled === 'true') {
+        setShowEnrolledMessage(true);
+        setTimeout(() => setShowEnrolledMessage(false), 5000);
+      }
+    }
+  }, [status, session, router, searchParams, loadCourses]);
 
   if (status === 'loading' || loading) {
     return (
@@ -85,7 +84,7 @@ function MyCoursesContent() {
         {showEnrolledMessage && (
           <div className="mb-6 bg-green-50 border-l-4 border-green-500 p-4 rounded-lg shadow-sm animate-fade-in">
             <div className="flex items-center">
-              <div className="flex-shrink-0">
+              <div className="shrink-0">
                 <svg className="h-5 w-5 text-green-500" fill="currentColor" viewBox="0 0 20 20">
                   <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
                 </svg>
@@ -132,15 +131,15 @@ function MyCoursesContent() {
                 className="bg-white rounded-lg shadow-sm hover:shadow-md transition-shadow duration-200 overflow-hidden border border-gray-100 flex flex-col"
               >
                 {/* Course Image */}
-                <div className="relative h-48 bg-gradient-to-br from-blue-500 to-purple-600">
+                <div className="relative h-48 bg-linear-to-br from-blue-500 to-purple-600">
                   {course.courseimage ? (
                     <>
                       <img
-                        src={course.courseimage}
+                        src={(course.courseimage?.includes('lms.prem') || course.courseimage?.includes('pluginfile')) ? `/api/proxy-image?url=${encodeURIComponent(course.courseimage)}` : course.courseimage}
                         alt={course.fullname}
                         className="w-full h-full object-cover"
                       />
-                      <div className="absolute inset-0 bg-gradient-to-t from-black/50 to-transparent" />
+                      <div className="absolute inset-0 bg-linear-to-t from-black/50 to-transparent" />
                     </>
                   ) : (
                     <div className="flex items-center justify-center h-full text-white">
