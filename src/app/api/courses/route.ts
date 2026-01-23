@@ -13,8 +13,12 @@ export async function GET(request: Request) {
       );
     }
 
+    console.log('📚 API: Fetching courses from Moodle...');
+    
     // Fetch courses with enrollment info and pricing from Moodle
     const courses = await getAllCoursesWithEnrolment(token);
+    
+    console.log(`📊 API: Received ${courses.length} courses from moodle-api`);
 
     // Transform courses to include proper pricing and image data
     const transformedCourses = courses.map((course: any) => {
@@ -22,7 +26,7 @@ export async function GET(request: Request) {
         // Use values already extracted by getAllCoursesWithEnrolment if available
         let displayPrice = course.displayPrice || null;
         let cost = course.cost || null;
-        let currency = course.currency || 'INR';
+        let currency = course.currency || 'INR'; // Default to INR if not specified
         
         // Fallback: Check custom fields if not already extracted or if we need to refine them
         if (course.customfields && Array.isArray(course.customfields)) {
@@ -40,7 +44,7 @@ export async function GET(request: Request) {
             );
             if (currencyField && currencyField.value !== undefined && currencyField.value !== null) {
               const val = typeof currencyField.value === 'object' && currencyField.value !== null ? currencyField.value.text : currencyField.value;
-              currency = val || currency;
+              if (val) currency = val; // Only update if we have a valid value
             }
           }
         }
@@ -48,11 +52,31 @@ export async function GET(request: Request) {
         // Final price for payment logic
         const actualPrice = cost || displayPrice;
 
-        // Safely extract image URL
-        let imageurl = course.courseimage || null;
-        if (!imageurl && course.overviewfiles && Array.isArray(course.overviewfiles) && course.overviewfiles.length > 0) {
-          imageurl = course.overviewfiles[0].fileurl;
+        // Safely extract image URL from backend
+        let courseimage = course.courseimage || null;
+        if (!courseimage && course.overviewfiles && Array.isArray(course.overviewfiles) && course.overviewfiles.length > 0) {
+          courseimage = course.overviewfiles[0].fileurl;
         }
+        
+        // If still no image, try to construct it from Moodle directly
+        // Moodle stores course images in: /moodle/course/overview_files.php?cid=COURSEID
+        // Or in custom course images: /moodle/pluginfile.php/COURSEID/course/overviewfiles/
+        if (!courseimage && course.id) {
+          // Try standard Moodle course image location
+          const moodleUrl = process.env.MOODLE_URL || process.env.NEXT_PUBLIC_MOODLE_URL || '';
+          if (moodleUrl) {
+            // Construct the standard Moodle course overview image URL
+            // This uses Moodle's built-in course image storage
+            const fallbackImageUrl = `${moodleUrl}/pluginfile.php/${course.id}/course/overviewfiles/0/`;
+            console.log(`📸 Constructed fallback image URL for course ${course.id}: ${fallbackImageUrl}`);
+            courseimage = fallbackImageUrl;
+          }
+        }
+        
+        // If courseimage is a Moodle pluginfile URL, it will be proxied on the frontend
+        // The backend already normalizes these URLs in moodle-api.ts
+        
+        console.log(`📸 Course ${course.id} (${course.fullname}): courseimage = ${courseimage}`);
 
         // Safely parse price for boolean logic
         const numericPrice = actualPrice ? parseFloat(String(actualPrice).replace(/[^\d.]/g, '')) : 0;
@@ -68,7 +92,8 @@ export async function GET(request: Request) {
           displayPrice: displayPrice,
           price: actualPrice,
           currency: currency,
-          imageurl: imageurl,
+          courseimage: courseimage,
+          overviewfiles: course.overviewfiles || [],
           requiresPayment: course.requiresPayment || (!isNaN(numericPrice) && numericPrice > 0) || false,
           paymentaccount: course.paymentaccount || null,
         };
@@ -83,6 +108,8 @@ export async function GET(request: Request) {
         };
       }
     });
+    
+    console.log(`✅ API: Returning ${transformedCourses.length} transformed courses`);
 
     return NextResponse.json(transformedCourses);
   } catch (error: any) {
@@ -93,3 +120,6 @@ export async function GET(request: Request) {
     );
   }
 }
+
+/* Cache configuration for optimal performance */
+export const revalidate = 300; // Revalidate every 5 minutes

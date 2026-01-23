@@ -28,8 +28,8 @@ export async function GET(request: NextRequest) {
       headers: {
         'User-Agent': 'Mozilla/5.0 (compatible; PremMCX/1.0)',
       },
-      // Set a timeout for the request
-      signal: AbortSignal.timeout(15000),
+      // Set a timeout for the request - use 60 seconds for slow servers
+      signal: AbortSignal.timeout(60000),
     });
 
     if (!response.ok) {
@@ -61,3 +61,6 @@ export async function GET(request: NextRequest) {
     );
   }
 }
+
+// Optimize cache settings for images and videos
+export const revalidate = 86400; // Cache for 24 hours

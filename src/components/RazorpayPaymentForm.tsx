@@ -82,6 +82,14 @@ export default function RazorpayPaymentForm({
         },
         handler: async (response: {razorpay_payment_id: string; razorpay_order_id: string; razorpay_signature: string}) => {
           try {
+            console.log('💳 ✅ PAYMENT SUCCESS: Razorpay handler triggered');
+            console.log('📋 Payment details:', {
+              orderId: response.razorpay_order_id,
+              paymentId: response.razorpay_payment_id,
+              signature: response.razorpay_signature.substring(0, 20) + '...',
+            });
+            console.log('💳 Now calling /api/payment/verify endpoint...');
+            
             // Verify payment on backend
             const verifyResponse = await fetch('/api/payment/verify', {
               method: 'POST',
@@ -95,27 +103,41 @@ export default function RazorpayPaymentForm({
               }),
             });
 
+            const verifyData = await verifyResponse.json();
+
             if (!verifyResponse.ok) {
-              const errorData = await verifyResponse.json();
-              throw new Error(errorData.error || 'Payment verification failed');
+              throw new Error(verifyData.error || 'Payment verification failed');
+            }
+
+            console.log('✅ PAYMENT VERIFICATION SUCCESS - Response from backend:');
+            console.log('✅', verifyData);
+
+            // Check enrollment results
+            if (verifyData.enrollmentResults) {
+              const failedEnrollments = verifyData.enrollmentResults.filter((r: any) => !r.success);
+              if (failedEnrollments.length > 0) {
+                console.warn('⚠️ Some enrollments failed:', failedEnrollments);
+                setError(`Payment successful but some enrollments failed. Please contact support with Order ID: ${response.razorpay_order_id}`);
+              }
             }
 
             // Payment verified successfully
-            // Call the success callback instead of redirecting
             setLoading(false);
             onSuccess();
           } catch (err) {
             const message = err instanceof Error ? err.message : 'Payment verification failed';
+            console.error('❌ Verification error:', message);
             setError(message);
             onError(message);
-          } finally {
             setLoading(false);
           }
         },
         modal: {
           ondismiss: () => {
+            console.log('❌ PAYMENT CANCELLED: User dismissed the Razorpay checkout modal');
             setLoading(false);
             setError('Payment cancelled');
+            onError('Payment cancelled by user');
           },
         },
         notes: {

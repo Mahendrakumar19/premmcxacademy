@@ -2,7 +2,6 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth/next';
 import { authOptions } from '@/lib/auth';
 import jwt from 'jsonwebtoken';
-import { getUserCourses } from '@/lib/moodle-api';
 
 // JWT secret - use a strong secret in production
 const JWT_SECRET = process.env.JWT_SECRET || process.env.NEXTAUTH_SECRET || 'your-secret-key-change-in-production';
@@ -49,37 +48,15 @@ export async function GET(request: NextRequest) {
       );
     }
 
-    // 3. Verify enrollment in the course
+    // 3. Verify enrollment in the course - REMOVED: Show content directly without enrollment check
     const userId = parseInt(session.user.id);
     const userToken = (session.user as any)?.token;
 
     if (!userToken) {
-      return NextResponse.json(
-        { error: 'Moodle token not available in session' },
-        { status: 400 }
-      );
+      console.log('[SecureStreaming] Warning: Moodle token not available, but proceeding without enrollment check');
     }
 
-    try {
-      const userCourses = await getUserCourses(userId, userToken);
-      const isEnrolled = userCourses.some((course: any) => course.id === courseIdNum);
-
-      if (!isEnrolled) {
-        console.warn(`[SecureStreaming] User ${userId} attempted to access course ${courseIdNum} without enrollment`);
-        return NextResponse.json(
-          { error: 'Access denied - You must be enrolled in this course' },
-          { status: 403 }
-        );
-      }
-
-      console.log(`[SecureStreaming] ✓ User ${userId} verified for course ${courseIdNum}, module ${moduleIdNum}`);
-    } catch (enrollError) {
-      console.error('[SecureStreaming] Enrollment verification failed:', enrollError);
-      return NextResponse.json(
-        { error: 'Failed to verify course enrollment' },
-        { status: 500 }
-      );
-    }
+    console.log(`[SecureStreaming] ✓ User ${userId} granted access to course ${courseIdNum}, module ${moduleIdNum} (no enrollment check)`);
 
     // 4. Generate JWT token with claims
     const tokenPayload = {

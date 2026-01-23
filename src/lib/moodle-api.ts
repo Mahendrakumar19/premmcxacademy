@@ -67,8 +67,8 @@ export async function callMoodleAPI(
       `${MOODLE_URL}/webservice/rest/server.php?${urlParams}`,
       { 
         method: 'POST',
-        // Add timeout for slow requests
-        signal: AbortSignal.timeout(30000)
+        // Add timeout for slow requests - use 60 seconds to handle slow Moodle servers
+        signal: AbortSignal.timeout(60000)
       }
     );
 
@@ -160,33 +160,59 @@ export async function getEnrolmentFee(courseId: number, token?: string) {
 // Get all courses with enrolment methods (including pricing) - Real-time from Moodle enrollment methods
 export async function getAllCoursesWithEnrolment(token?: string) {
   try {
-    // Fetch all courses from Moodle
+    console.log('📚 [getAllCoursesWithEnrolment] Starting to fetch courses from Moodle...');
+    
+    // Fetch all courses from Moodle with additional options to include course images
+    // Note: core_course_get_courses doesn't return overviewfiles by default
+    // We need to fetch them separately using core_course_get_overview_files or construct URLs
     let courses = await callMoodleAPI('core_course_get_courses', {}, token, true);
     
-    console.log('📚 Fetched courses from Moodle:', Array.isArray(courses) ? courses.length : 'ERROR - ' + JSON.stringify(courses));
+    console.log('📚 [getAllCoursesWithEnrolment] Raw response type:', typeof courses, 'isArray:', Array.isArray(courses));
     
-    // If the response is an error object, return empty
+    // Log first course structure to debug what fields are available
+    if (Array.isArray(courses) && courses.length > 0) {
+      console.log('📋 First course structure:', {
+        id: courses[0].id,
+        fullname: courses[0].fullname,
+        hasOverviewfiles: !!courses[0].overviewfiles,
+        hasCourseimage: !!courses[0].courseimage,
+        hasImageUrl: !!courses[0].imageurl,
+        overviewfilesCount: courses[0].overviewfiles?.length || 0,
+        allKeys: Object.keys(courses[0]).slice(0, 20) // First 20 keys
+      });
+      
+      // If no overviewfiles in standard API, try to fetch them separately for each course
+      // Moodle stores course images in course/overviewfiles area
+      if (!courses[0].overviewfiles && courses.length > 0) {
+        console.log('⚠️ Standard API returned no overviewfiles, will construct URLs from Moodle');
+      }
+    }
+    
     if (courses?.exception || courses?.errorcode) {
-      console.error('❌ Moodle API returned error:', courses);
+      console.error('❌ [getAllCoursesWithEnrolment] Moodle API returned error:', courses);
       return [];
     }
     
     if (!Array.isArray(courses)) {
-      console.error('❌ Moodle API did not return array:', courses);
+      console.error('❌ [getAllCoursesWithEnrolment] Moodle API did not return array:', JSON.stringify(courses).substring(0, 200));
       return [];
     }
     
+    console.log(`📊 [getAllCoursesWithEnrolment] Fetched ${courses.length} courses from Moodle (before filtering)`);
+    
     // Filter out site courses (format: 'site', id: 1) immediately
+    const beforeFilterCount = courses.length;
     courses = courses.filter((course: any) => course.format !== 'site' && course.id !== 1);
     
-    console.log('📚 After filtering site courses:', courses.length);
-
+    console.log(`📚 [getAllCoursesWithEnrolment] After filtering: ${courses.length} courses (removed ${beforeFilterCount - courses.length} site courses)`);
     if (courses.length > 0) {
-      console.log('📊 Sample course data (first course):', JSON.stringify(courses[0], null, 2).substring(0, 500));
+      console.log('📊 [getAllCoursesWithEnrolment] Sample course IDs:', courses.slice(0, 5).map((c: any) => `${c.id}: ${c.fullname}`));
     }
     
+    console.log(`🔄 [getAllCoursesWithEnrolment] Starting to fetch enrollment info for ${courses.length} courses...`);
+    
     // Get enrollment fee ONLY from Moodle's enrol_fee plugin AND custom fields for display price
-    const coursesWithEnrolment = await Promise.all(courses.map(async (course: any) => {
+    const coursesWithEnrolment = await Promise.all(courses.map(async (course: any, index: number) => {
       let cost = null;
       let currency = 'INR';
       let requiresPayment = false;
@@ -218,7 +244,9 @@ export async function getAllCoursesWithEnrolment(token?: string) {
         }
       }
       
-      // Get payment/enrolment info for the course
+      if (index < 3) {
+        console.log(`🔍 [${index + 1}/${courses.length}] Checking enrollment for course ${course.id} (${course.fullname})...`);
+      }
       console.log(`🔍 Checking enrollment fee for course ${course.id} (${course.fullname})...`);
       const paymentInfo = await getCoursePaymentInfo(course.id, token);
       if (paymentInfo) {
@@ -229,15 +257,49 @@ export async function getAllCoursesWithEnrolment(token?: string) {
         (course as any).paymentaccount = paymentInfo.paymentaccount || null;
         console.log(`✅ Enrollment fee from Moodle: ${currency} ${cost} (account: ${paymentInfo.paymentaccount || 'none'})`);
       } else {
-        console.log(`ℹ️ No enrollment fee configured for course ${course.id}`);
+        // Fallback: Use custom field price if no enrollment fee plugin is configured
+        if (displayPrice) {
+          cost = displayPrice;
+          requiresPayment = parseFloat(String(displayPrice || '0').replace(/[^\d.]/g, '')) > 0;
+          console.log(`📝 Using custom field price as cost: ${currency} ${cost}`);
+        } else {
+          console.log(`ℹ️ No enrollment fee configured for course ${course.id}`);
+        }
       }
 
-      // Extract course image
-      const courseimage = null;
+      // Extract course image - try multiple sources
+      let courseimage = null;
+      
+      // Try source 1: overviewfiles array (from API response)
       if (course.overviewfiles && Array.isArray(course.overviewfiles) && course.overviewfiles.length > 0) {
-        return { ...course, cost, currency, requiresPayment, displayPrice, courseimage: normalizePluginfileUrl(course.overviewfiles[0].fileurl) };
-      } else if (course.courseimage) {
-        return { ...course, cost, currency, requiresPayment, displayPrice, courseimage: normalizePluginfileUrl(course.courseimage) };
+        const imageUrl = course.overviewfiles[0].fileurl;
+        courseimage = imageUrl ? normalizePluginfileUrl(imageUrl) : null;
+        if (courseimage) console.log(`📸 [${course.id}] Image from overviewfiles: ${courseimage}`);
+      }
+      
+      // Try source 2: courseimage field
+      if (!courseimage && course.courseimage) {
+        courseimage = normalizePluginfileUrl(course.courseimage);
+        if (courseimage) console.log(`📸 [${course.id}] Image from courseimage: ${courseimage}`);
+      }
+      
+      // Try source 3: imageurl field (alternative naming)
+      if (!courseimage && course.imageurl) {
+        courseimage = normalizePluginfileUrl(course.imageurl);
+        if (courseimage) console.log(`📸 [${course.id}] Image from imageurl: ${courseimage}`);
+      }
+      
+      // Try source 4: Construct from Moodle directly if available
+      // Moodle stores course images in: /pluginfile.php/COURSEID/course/overviewfiles/FILENAME
+      if (!courseimage && MOODLE_URL) {
+        // First, try the standard course overview image location
+        const overviewImageUrl = `${MOODLE_URL}/pluginfile.php/${course.id}/course/overviewfiles/`;
+        console.log(`📸 [${course.id}] Constructed Moodle course image URL: ${overviewImageUrl}`);
+        courseimage = overviewImageUrl;
+      }
+      
+      if (!courseimage) {
+        console.log(`📸 [${course.id}] ⚠️ Could not determine image for course: ${course.fullname}`);
       }
 
       return {
@@ -249,6 +311,8 @@ export async function getAllCoursesWithEnrolment(token?: string) {
         courseimage
       };
     }));
+
+    console.log(`✅ [getAllCoursesWithEnrolment] Completed! Returning ${coursesWithEnrolment.length} courses with enrollment info`);
 
     return coursesWithEnrolment;
   } catch (err) {
@@ -307,7 +371,14 @@ export async function getCourseWithEnrolment(courseId: number, token?: string) {
       requiresPayment = !!paymentInfo.requiresPayment;
       console.log(`✅ Enrollment fee from Moodle: ${currency} ${cost}`);
     } else {
-      console.log(`ℹ️ No enrollment fee configured for course ${course.id}`);
+      // Fallback: Use custom field price if no enrollment fee plugin is configured
+      if (displayPrice) {
+        cost = displayPrice;
+        requiresPayment = parseFloat(String(displayPrice || '0').replace(/[^\d.]/g, '')) > 0;
+        console.log(`📝 Using custom field price as cost: ${currency} ${cost}`);
+      } else {
+        console.log(`ℹ️ No enrollment fee configured for course ${course.id}`);
+      }
     }
 
     return {
@@ -378,28 +449,63 @@ export async function getCourseContents(courseId: number, token?: string) {
       const normalized = contents.map((section: any) => {
         if (section && Array.isArray(section.modules)) {
           section.modules = section.modules.map((mod: any) => {
-            // Normalize direct module URLs
-            if (mod.url && typeof mod.url === 'string') {
-              mod.url = normalizePluginfileUrl(mod.url);
-            }
+            // Ensure module has required fields
+            const normalizedMod = {
+              ...mod,
+              name: mod.name || `${mod.modname} (${mod.id})`,
+              modname: mod.modname || 'unknown',
+              description: mod.description || '',
+              url: mod.url ? normalizePluginfileUrl(mod.url) : undefined,
+              contents: Array.isArray(mod.contents) ? mod.contents : [],
+            };
 
             // Normalize module contents (files)
-            if (Array.isArray(mod.contents)) {
-              mod.contents = mod.contents.map((c: any) => {
+            if (Array.isArray(normalizedMod.contents)) {
+              normalizedMod.contents = normalizedMod.contents.map((c: any) => {
                 if (c && c.fileurl && typeof c.fileurl === 'string') {
                   c.fileurl = normalizePluginfileUrl(c.fileurl);
                 }
                 return c;
               });
+              
+              // Log video files found
+              const videoFiles = normalizedMod.contents.filter((c: any) => 
+                c.filename?.match(/\.(mp4|webm|ogg|mov|avi|mkv)$/i)
+              );
+              if (videoFiles.length > 0) {
+                console.log(`  🎥 Found ${videoFiles.length} video(s) in "${normalizedMod.name}"`);
+                videoFiles.forEach((v: any) => {
+                  console.log(`    📹 ${v.filename} (${v.filesize || 0} bytes)`);
+                });
+              }
             }
 
-            return mod;
+            return normalizedMod;
           });
         }
         return section;
       });
 
       console.log(`✅ Course contents loaded: ${normalized.length} sections`);
+      
+      // Log summary
+      let totalModules = 0;
+      let totalVideos = 0;
+      normalized.forEach((section: any) => {
+        if (section.modules) {
+          totalModules += section.modules.length;
+          section.modules.forEach((mod: any) => {
+            if (mod.contents) {
+              const videos = mod.contents.filter((c: any) => 
+                c.filename?.match(/\.(mp4|webm|ogg|mov|avi|mkv)$/i)
+              );
+              totalVideos += videos.length;
+            }
+          });
+        }
+      });
+      console.log(`📊 Content summary: ${totalModules} modules, ${totalVideos} videos`);
+      
       return normalized;
     }
 

@@ -26,28 +26,11 @@ const NavbarContent = () => {
     localStorage.removeItem('theme');
   }, []);
 
-  // Don't render interactive content until client-side hydration is complete
-  if (!mounted) {
-    return (
-      <nav className="sticky top-0 z-50 w-full bg-white/95 backdrop-blur-md border-b border-gray-200 shadow-sm">
-        <div className="mx-auto flex max-w-7xl items-center justify-between px-6 py-4">
-          <Link href="/" className="flex items-center gap-2">
-            <Image src="/premmcx-logo.png" alt="PremMCX Logo" width={40} height={40} className="h-10 w-10" />
-            <div className="flex flex-col">
-              <span className="text-lg font-bold text-gray-900">Prem Mcx</span>
-              <span className="text-xs text-gray-500">Trading Academy</span>
-            </div>
-          </Link>
-        </div>
-      </nav>
-    );
-  }
-
   return (
     <nav className="sticky top-0 z-50 w-full bg-white/95 backdrop-blur-md border-b border-gray-200 shadow-sm">
       <div className="mx-auto flex max-w-7xl items-center justify-between px-6 py-4">
         <div className="flex items-center gap-4">
-          {pathname !== "/" && (
+          {mounted && pathname !== "/" && (
             <button
               onClick={() => router.back()}
               className="flex h-10 w-10 items-center justify-center rounded-full bg-gray-50 border border-gray-200 text-gray-600 hover:bg-gray-100 hover:text-indigo-600 transition-all shadow-sm"
@@ -104,10 +87,10 @@ const NavbarContent = () => {
             <span className="absolute bottom-0 left-0 w-0 h-0.5 bg-indigo-600 group-hover:w-full transition-all duration-300"></span>
           </Link>
 
-          {/* Resources Dropdown */}
+          {/* Homepage Dropdown */}
           <div className="relative group">
             <button className="text-sm font-semibold text-gray-700 hover:text-indigo-600 transition-colors flex items-center gap-1">
-              Resources
+              Homepage
               <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
               </svg>
@@ -116,39 +99,39 @@ const NavbarContent = () => {
             {/* Dropdown Content */}
             <div className="absolute left-0 mt-0 w-56 bg-white rounded-lg shadow-xl border border-gray-200 opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200 py-2 z-50">
               <Link
-                href="/blog"
+                href="/homepage-01"
                 className="flex items-center gap-3 px-4 py-3 hover:bg-indigo-50 transition-colors"
               >
                 <svg className="w-5 h-5 text-indigo-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
                 </svg>
                 <div>
-                  <p className="text-sm font-semibold text-gray-900">Blog</p>
-                  <p className="text-xs text-gray-500">Trading articles & insights</p>
+                  <p className="text-sm font-semibold text-gray-900">Homepage 01</p>
+                  <p className="text-xs text-gray-500">Trading basics & strategies</p>
                 </div>
               </Link>
               <Link
-                href="/tools"
+                href="/homepage-02"
                 className="flex items-center gap-3 px-4 py-3 hover:bg-green-50 transition-colors border-t border-gray-100"
               >
                 <svg className="w-5 h-5 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6V4m0 2a2 2 0 100 4m0-4a2 2 0 110 4m-6 8a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4m6 6v10m6-2a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4" />
                 </svg>
                 <div>
-                  <p className="text-sm font-semibold text-gray-900">Tools</p>
-                  <p className="text-xs text-gray-500">Free calculators & tools</p>
+                  <p className="text-sm font-semibold text-gray-900">Homepage 02</p>
+                  <p className="text-xs text-gray-500">Advanced tools & analysis</p>
                 </div>
               </Link>
               <Link
-                href="/webinars"
+                href="/homepage-03"
                 className="flex items-center gap-3 px-4 py-3 hover:bg-orange-50 transition-colors border-t border-gray-100"
               >
                 <svg className="w-5 h-5 text-orange-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z" />
                 </svg>
                 <div>
-                  <p className="text-sm font-semibold text-gray-900">Webinars</p>
-                  <p className="text-xs text-gray-500">Live training sessions</p>
+                  <p className="text-sm font-semibold text-gray-900">Homepage 03</p>
+                  <p className="text-xs text-gray-500">Market insights & news</p>
                 </div>
               </Link>
             </div>
@@ -360,7 +343,9 @@ const NavbarContent = () => {
                   </Link>
                   <div className="border-t border-gray-200 my-2"></div>
                   <button
-                    onClick={() => signOut({ callbackUrl: "/auth/signout" })}
+                    onClick={async () => {
+                      await signOut({ redirect: true, callbackUrl: "/" });
+                    }}
                     className="flex items-center w-full text-left px-4 py-2 text-sm text-red-600 hover:bg-red-50 transition-colors"
                   >
                     <svg className="w-4 h-4 mr-3 text-red-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -572,9 +557,9 @@ const NavbarContent = () => {
                 </Link>
                 
                 <button
-                  onClick={() => {
+                  onClick={async () => {
                     setMobileMenuOpen(false);
-                    signOut({ callbackUrl: "/auth/signout" });
+                    await signOut({ redirect: true, callbackUrl: "/" });
                   }}
                   className="text-left text-sm font-semibold text-red-600"
                 >

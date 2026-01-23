@@ -49,31 +49,38 @@ function LoginForm() {
       if (result?.error) {
         console.error("❌ SignIn error:", result.error);
         setError("Invalid username or password");
+        setLoading(false);
       } else if (result?.ok) {
-        console.log("✅ Login successful, redirecting...");
+        console.log("✅ Login successful");
+        
+        // Wait briefly for session to propagate
+        await new Promise(resolve => setTimeout(resolve, 300));
+        
         // Check if there's a pending cart item to add after login
         const pendingItem = sessionStorage.getItem('pendingAddToCart');
-        if (pendingItem) {
+        if (pendingItem && callbackUrl !== '/dashboard') {
           try {
             const item = JSON.parse(pendingItem);
             addToCart(item);
             sessionStorage.removeItem('pendingAddToCart');
-            // Redirect to cart instead of callback URL if there's a pending item
             console.log("🛒 Redirecting to cart with pending item");
             router.push('/cart');
+            router.refresh();
           } catch (err) {
             console.error('Error adding pending cart item:', err);
             console.log("📍 Redirecting to:", callbackUrl);
             router.push(callbackUrl);
+            router.refresh();
           }
         } else {
           console.log("📍 Redirecting to:", callbackUrl);
           router.push(callbackUrl);
+          router.refresh();
         }
-        router.refresh();
       } else {
         console.log("⚠️ SignIn returned but not ok, result:", result);
         setError("Login failed. Please try again.");
+        setLoading(false);
       }
     } catch (error) {
       console.error("Login error:", error);

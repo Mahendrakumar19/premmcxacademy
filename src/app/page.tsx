@@ -86,8 +86,13 @@ export default function HomePage() {
       course.summary?.toLowerCase().includes(searchQuery.toLowerCase());
     const matchesCategory = selectedCategory === 'all' || (course.categoryname || 'General') === selectedCategory;
     
-    // Price range filtering - use displayPrice
-    const coursePrice = course.displayPrice ? parseFloat(String(course.displayPrice)) : 0;
+    // Price range filtering - handle non-numeric prices gracefully
+    let coursePrice = 0;
+    if (course.displayPrice) {
+      // Try to extract numeric value, if it's not a number, default to 0 (free)
+      const numericPrice = parseFloat(String(course.displayPrice).replace(/[^\d.]/g, ''));
+      coursePrice = isNaN(numericPrice) ? 0 : numericPrice;
+    }
     const matchesPrice = coursePrice >= priceRange[0] && coursePrice <= priceRange[1];
     
     return matchesSearch && matchesCategory && matchesPrice;
@@ -297,15 +302,51 @@ export default function HomePage() {
             </div>
           ) : (
             <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-8">
-              {filteredCourses.map((course) => (
+              {filteredCourses.map((course) => {
+                // Get image URL from backend
+                const rawImageUrl = course.courseimage || 
+                                 course.overviewfiles?.[0]?.fileurl || 
+                                 null;
+                
+                // If it's a Moodle image URL, use the proxy
+                // Proxy URLs that contain Moodle domain or are pluginfile paths
+                const isMoodleUrl = rawImageUrl && (
+                  rawImageUrl.includes('lms.prem') || 
+                  rawImageUrl.includes('pluginfile') ||
+                  rawImageUrl.includes('draftfile') ||
+                  rawImageUrl.includes('/course/overview') ||
+                  rawImageUrl.includes('http') // Absolute URLs from Moodle
+                );
+                
+                const imageUrl = isMoodleUrl && rawImageUrl
+                  ? `/api/proxy-image?url=${encodeURIComponent(rawImageUrl)}`
+                  : rawImageUrl;
+                
+                return (
                 <div
                   key={course.id}
                   className="group bg-white rounded-2xl shadow-md hover:shadow-2xl transition-all duration-300 overflow-hidden border border-gray-100 hover:border-indigo-200 transform hover:-translate-y-2"
                 >
-                  {/* Course Header Gradient */}
-                  <div className="relative h-48 bg-linear-to-br from-indigo-500 via-purple-500 to-pink-500 overflow-hidden">
-                    <div className="w-full h-full flex items-center justify-center">
-                      <svg className="w-24 h-24 text-white/30" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  {/* Course Header - Image or Gradient */}
+                  <div className="relative h-48 bg-gradient-to-br from-blue-100 via-purple-100 to-pink-100 overflow-hidden">
+                    {imageUrl ? (
+                      <img 
+                        src={imageUrl} 
+                        alt={course.fullname}
+                        className="w-full h-full object-cover"
+                        onError={(e) => {
+                          // On image load failure, show the gradient by hiding the image
+                          e.currentTarget.style.display = 'none';
+                          // Show the book icon
+                          const parent = e.currentTarget.nextElementSibling as HTMLElement;
+                          if (parent) parent.style.display = 'flex';
+                        }}
+                      />
+                    ) : null}
+                    
+                    {/* Fallback Icon when no image or image fails */}
+                    <div className="absolute inset-0 flex items-center justify-center bg-gradient-to-br from-gray-100 to-gray-200" style={{display: imageUrl ? 'none' : 'flex'}}>
+                      <svg className="w-24 h-24 text-gray-400/50" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253" />
                       </svg>
                     </div>
@@ -318,25 +359,6 @@ export default function HomePage() {
                         </span>
                       </div>
                     )}
-                    
-                    {/* Price Badge with Money Icon */}
-                    {/* <div className="absolute top-4 right-4">
-                      {course.displayPrice && parseFloat(String(course.displayPrice)) > 0 ? (
-                        <div className="flex items-center gap-1 px-3 py-1.5 bg-white/95 backdrop-blur-sm rounded-full shadow-lg">
-                          <svg className="w-4 h-4 text-green-600" fill="currentColor" viewBox="0 0 20 20">
-                            <path d="M8.433 7.418c.155-.103.346-.196.567-.267v1.698a2.305 2.305 0 01-.567-.267C8.07 8.34 8 8.114 8 8c0-.114.07-.34.433-.582zM11 12.849v-1.698c.22.071.412.164.567.267.364.243.433.468.433.582 0 .114-.07.34-.433.582a2.305 2.305 0 01-.567.267z" />
-                            <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm1-13a1 1 0 10-2 0v.092a4.535 4.535 0 00-1.676.662C6.602 6.234 6 7.009 6 8c0 .99.602 1.765 1.324 2.246.48.32 1.054.545 1.676.662v1.941c-.391-.127-.68-.317-.843-.504a1 1 0 10-1.51 1.31c.562.649 1.413 1.076 2.353 1.253V15a1 1 0 102 0v-.092a4.535 4.535 0 001.676-.662C13.398 13.766 14 12.991 14 12c0-.99-.602-1.765-1.324-2.246A4.535 4.535 0 0011 9.092V7.151c.391.127.68.317.843.504a1 1 0 101.511-1.31c-.563-.649-1.413-1.076-2.354-1.253V5z" clipRule="evenodd" />
-                          </svg>
-                          <span className="text-sm font-bold text-gray-900">
-                            {course.currency === 'INR' ? '₹' : ' '}{parseFloat(String(course.displayPrice)).toLocaleString('en-IN')}
-                          </span>
-                        </div>
-                      ) : (
-                        <div className="px-3 py-1.5 bg-green-500/95 backdrop-blur-sm rounded-full shadow-lg">
-                          <span className="text-xs font-bold text-white">FREE</span>
-                        </div>
-                      )}
-                    </div> */}
                   </div>
 
                   {/* Course Content */}
@@ -345,7 +367,7 @@ export default function HomePage() {
                       {course.fullname}
                     </h3>
                     
-                    <p className="text-gray-600 text-sm mb-4 line-clamp-3">
+                    <p className="text-gray-600 text-sm mb-4 line-clamp-3 group-hover:line-clamp-none group-hover:text-gray-700 group-hover:bg-gray-50 group-hover:p-3 group-hover:rounded transition-all">
                       {course.summary.replace(/<[^>]*>/g, '')}
                     </p>
 
@@ -396,7 +418,7 @@ export default function HomePage() {
                     </div>
                   </div>
                 </div>
-              ))}
+              )})}
             </div>
           )}
         </div>

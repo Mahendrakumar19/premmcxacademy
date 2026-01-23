@@ -62,10 +62,11 @@ export const authOptions: NextAuthOptions = {
               return {
                 id: userData.userid.toString(),
                 name: userData.fullname,
-                email: userData.username,
+                email: userData.email || userData.username,  // Use email if available, fallback to username
                 image: userData.userpictureurl,
                 token: data.token,
                 role: userRole,
+                username: userData.username,  // Store username separately for enrollment
               };
             }
           }
@@ -79,11 +80,16 @@ export const authOptions: NextAuthOptions = {
     }),
   ],
   callbacks: {
-    async jwt({ token, user }) {
+    async jwt({ token, user, trigger }) {
       if (user) {
         token.id = user.id;
         token.token = user.token;
         token.role = user.role;
+      }
+      // Update token on any trigger (like session update)
+      if (trigger === "update") {
+        // Refresh token data if needed
+        return token;
       }
       return token;
     },
@@ -104,6 +110,9 @@ export const authOptions: NextAuthOptions = {
   session: {
     strategy: "jwt",
     maxAge: 30 * 24 * 60 * 60, // 30 days
+    updateAge: 24 * 60 * 60, // Update session every 24 hours
   },
   secret: process.env.NEXTAUTH_SECRET || "your-secret-key-change-in-production",
+  // Enable debug in development
+  debug: process.env.NODE_ENV === 'development',
 };

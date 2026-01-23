@@ -52,17 +52,30 @@ export default function CheckoutPage() {
       <div className="min-h-screen bg-gray-50">
         <Navbar />
         <div className="flex items-center justify-center min-h-[calc(100vh-80px)]">
-          <div className="max-w-md w-full text-center">
+          <div className="max-w-md w-full text-center p-6">
             <div className="inline-flex items-center justify-center h-16 w-16 bg-green-100 rounded-full mb-4">
               <svg className="h-8 w-8 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
               </svg>
             </div>
             <h2 className="text-2xl font-bold text-gray-900 mb-2">Payment Successful!</h2>
-            <p className="text-gray-600 mb-6">Your enrollment has been completed. You will receive a confirmation email shortly.</p>
+            <p className="text-gray-600 mb-2">Your payment has been processed and you have been enrolled in your courses.</p>
+            <p className="text-sm text-gray-500 mb-6">You will receive a confirmation email shortly with your course access details.</p>
+            
+            {/* Course Access Info */}
+            <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-6">
+              <p className="text-sm text-blue-900 font-medium mb-1">🎓 Ready to Start Learning?</p>
+              <p className="text-xs text-blue-700">Your courses are now available in your dashboard. You can access them anytime!</p>
+            </div>
             
             {/* Action Buttons */}
             <div className="space-y-3">
+              <button
+                onClick={() => window.location.href = process.env.NEXT_PUBLIC_MOODLE_URL || 'https://lms.premmcxtrainingacademy.com'}
+                className="w-full px-6 py-3 bg-green-600 text-white font-semibold rounded-lg hover:bg-green-700 transition-colors shadow-md"
+              >
+                Go to LMS Dashboard
+              </button>
               <button
                 onClick={() => router.push('/courses')}
                 className="w-full px-6 py-3 bg-indigo-600 text-white font-semibold rounded-lg hover:bg-indigo-700 transition-colors"
@@ -70,10 +83,10 @@ export default function CheckoutPage() {
                 Browse More Courses
               </button>
               <button
-                onClick={() => router.push('/cart')}
+                onClick={() => router.push('/payment-history')}
                 className="w-full px-6 py-3 bg-gray-200 text-gray-900 font-semibold rounded-lg hover:bg-gray-300 transition-colors"
               >
-                Return to Cart
+                View Payment History
               </button>
             </div>
           </div>

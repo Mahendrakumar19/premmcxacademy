@@ -7,6 +7,30 @@ import Link from "next/link";
 import Navbar from "@/components/Navbar";
 import { getCourseById, getCourseContents } from "@/lib/moodle-api";
 
+// Sanitize HTML to remove problematic forms and scripts (server-safe)
+function sanitizeHTML(html: string): string {
+  if (!html) return '';
+  
+  try {
+    // Remove script tags
+    let sanitized = html.replace(/<script\b[^<]*(?:(?!<\/script>)<[^<]*)*<\/script>/gi, '');
+    
+    // Remove form tags and their contents
+    sanitized = sanitized.replace(/<form\b[^<]*(?:(?!<\/form>)<[^<]*)*<\/form>/gi, '');
+    
+    // Remove input, button, select, textarea tags
+    sanitized = sanitized.replace(/<(input|button|select|textarea)\b[^>]*>/gi, '');
+    
+    // Remove event handlers
+    sanitized = sanitized.replace(/\s*on\w+\s*=\s*["'][^"']*["']/gi, '');
+    sanitized = sanitized.replace(/\s*on\w+\s*=\s*[^\s>]*/gi, '');
+    
+    return sanitized;
+  } catch (e) {
+    return html;
+  }
+}
+
 interface CourseModule {
   id: number;
   name: string;
@@ -122,14 +146,14 @@ export default function CourseLearningPage({ params }: { params: Promise<{ id: s
     // Debug: Log module data to console
     console.log('🔹 Selected module:', {
       id: module.id,
-      name: module.name,
-      modname: module.modname,
+      name: module.name || '(no name)',
+      modname: module.modname || '(no modname)',
       hasUrl: !!module.url,
-      url: module.url,
+      url: module.url || '(no url)',
       hasContents: !!module.contents,
       contentsLength: module.contents?.length || 0,
-      contents: module.contents,
-      description: module.description ? `${module.description.substring(0, 100)}...` : 'No description',
+      contents: module.contents || [],
+      description: module.description ? `${module.description.substring(0, 100)}...` : '(no description)',
     });
     
     // Fetch content based on module type
@@ -223,7 +247,7 @@ export default function CourseLearningPage({ params }: { params: Promise<{ id: s
                               }`}
                             >
                               <span className="text-lg flex-shrink-0">{getModuleIcon(module.modname)}</span>
-                              <span className="truncate">{module.name}</span>
+                              <span className="truncate">{module.name || `${module.modname} Module`}</span>
                             </button>
                           </li>
                         ))}
@@ -245,9 +269,9 @@ export default function CourseLearningPage({ params }: { params: Promise<{ id: s
                     <div>
                       <div className="flex items-center gap-3 mb-2">
                         <span className="text-3xl">{getModuleIcon(selectedModule.modname)}</span>
-                        <h1 className="text-3xl font-bold">{selectedModule.name}</h1>
+                        <h1 className="text-3xl font-bold">{selectedModule.name || `${selectedModule.modname} Module`}</h1>
                       </div>
-                      <p className="text-orange-100 text-sm font-medium capitalize">{selectedModule.modname} • {selectedModule.modplural || ''}</p>
+                      <p className="text-orange-100 text-sm font-medium capitalize">{selectedModule.modname || 'module'} • {selectedModule.modplural || ''}</p>
                     </div>
                   )}
                 </div>
@@ -260,7 +284,7 @@ export default function CourseLearningPage({ params }: { params: Promise<{ id: s
                     {/* For page modules, render description directly (it may contain embedded videos) */}
                     {selectedModule.modname === 'page' ? (
                       <div
-                        dangerouslySetInnerHTML={{ __html: selectedModule.description }}
+                        dangerouslySetInnerHTML={{ __html: sanitizeHTML(selectedModule.description || '') }}
                         className="prose prose-lg max-w-none video-content text-gray-800"
                       />
                     ) : (
@@ -273,7 +297,7 @@ export default function CourseLearningPage({ params }: { params: Promise<{ id: s
                           Module Description
                         </h2>
                         <div
-                          dangerouslySetInnerHTML={{ __html: selectedModule.description }}
+                          dangerouslySetInnerHTML={{ __html: selectedModule.description || '' }}
                           className="text-gray-700 bg-orange-50 p-6 rounded-lg border border-orange-200 prose prose-sm max-w-none"
                         />
                       </>
@@ -443,99 +467,68 @@ export default function CourseLearningPage({ params }: { params: Promise<{ id: s
                   </div>
                 )}
 
-                {/* Show Videos/Media Inline - Filter to show only video content */}
+                {/* Show Videos ONLY - No other file types */}
                 {selectedModule.contents && selectedModule.contents.length > 0 && (
-                  <div className="space-y-6">
-                    {selectedModule.contents
-                      .map((file, idx) => {
-                        const isVideo = file.filename.match(/\.(mp4|webm|ogg|mov|avi|mkv)$/i);
-                        const isHTML = file.filename.match(/\.(html|htm)$/i);
-                        const isPDF = file.filename.match(/\.pdf$/i);
-                        
-                        // Add authentication token to Moodle URLs via proxy
-                        const authenticatedUrl = file.fileurl.includes('pluginfile.php') || file.fileurl.includes('lms.prem')
-                          ? `/api/proxy-image?url=${encodeURIComponent(file.fileurl)}`
-                          : file.fileurl;
-                        
-                        return (
-                          <div key={idx} className="w-full">
-                            {isVideo && (
-                              <div className="space-y-3">
-                                <div className="flex items-center gap-2 text-gray-700">
-                                  <svg className="w-5 h-5 text-red-500" fill="currentColor" viewBox="0 0 20 20">
-                                    <path d="M2 6a2 2 0 012-2h12a2 2 0 012 2v8a2 2 0 01-2 2H4a2 2 0 01-2-2V6z"></path>
-                                    <path d="M6.3 12.3a1 1 0 001.4 0l2.3-2.3 2.3 2.3a1 1 0 001.4-1.4l-2.3-2.3 2.3-2.3a1 1 0 00-1.4-1.4l-2.3 2.3-2.3-2.3a1 1 0 00-1.4 1.4l2.3 2.3-2.3 2.3a1 1 0 000 1.4z"></path>
-                                  </svg>
-                                  <p className="text-sm font-semibold">{file.filename}</p>
-                                </div>
+                  <div className="flex gap-6">
+                    {/* Video Player - Main Content */}
+                    <div className="flex-1">
+                      {selectedModule.contents
+                        .filter((file) => {
+                          // Show ONLY video files
+                          return file.filename?.match(/\.(mp4|webm|ogg|mov|avi|mkv)$/i);
+                        })
+                        .map((file, idx) => {
+                          const isVideo = true;
+                          
+                          // Add authentication token to Moodle URLs via proxy
+                          const authenticatedUrl = (file.fileurl || '').includes('pluginfile.php') || (file.fileurl || '').includes('lms.prem')
+                            ? `/api/proxy-image?url=${encodeURIComponent(file.fileurl)}`
+                            : file.fileurl;
+                          
+                          return (
+                            <div key={idx} className="w-full">
+                              {isVideo && (
                                 <div className="bg-gray-900 rounded-xl overflow-hidden shadow-xl">
-                                  <video
-                                    controls
-                                    controlsList="nodownload"
-                                    disablePictureInPicture
-                                    className="w-full"
-                                    src={authenticatedUrl}
-                                    preload="metadata"
-                                  >
-                                    Your browser does not support video playback.
-                                  </video>
+                                  {authenticatedUrl ? (
+                                    <video
+                                      controls
+                                      controlsList="nodownload"
+                                      disablePictureInPicture
+                                      className="w-full"
+                                      src={authenticatedUrl}
+                                      preload="metadata"
+                                      onError={(e) => {
+                                        console.error('Video playback error:', e);
+                                      }}
+                                    >
+                                      Your browser does not support video playback.
+                                    </video>
+                                  ) : (
+                                    <div className="w-full h-[400px] bg-gray-800 flex items-center justify-center">
+                                      <p className="text-gray-400">No video URL available</p>
+                                    </div>
+                                  )}
                                 </div>
-                              </div>
-                            )}                            {isHTML && (
-                              <div className="space-y-3">
-                                <div className="flex items-center gap-2 text-gray-700">
-                                  <svg className="w-5 h-5 text-purple-500" fill="currentColor" viewBox="0 0 20 20">
-                                    <path d="M5.5 13a3.5 3.5 0 01-.369-6.98 4 4 0 117.753-1.3A4.5 4.5 0 1113.5 13H11V9.413l1.293 1.293a1 1 0 001.414-1.414l-3-3a1 1 0 00-1.414 0l-3 3a1 1 0 001.414 1.414L9 9.414V13H5.5z"></path>
-                                  </svg>
-                                  <p className="text-sm font-semibold">{file.filename}</p>
-                                </div>
-                                <div className="border-2 border-purple-300 rounded-lg overflow-hidden bg-purple-50">
-                                  <iframe
-                                    src={authenticatedUrl}
-                                    className="w-full h-[600px]"
-                                    title={file.filename}
-                                    allowFullScreen
-                                    sandbox="allow-same-origin allow-scripts allow-popups allow-forms"
-                                  />
-                                </div>
-                              </div>
-                            )}
-                            {isPDF && (
-                              <div className="space-y-3">
-                                <div className="flex items-center gap-2 text-gray-700">
-                                  <svg className="w-5 h-5 text-red-600" fill="currentColor" viewBox="0 0 20 20">
-                                    <path fillRule="evenodd" d="M8 4a3 3 0 00-3 3v4a5 5 0 0010 0V7a1 1 0 112 0v4a7 7 0 11-14 0V7a5 5 0 0110 0v4a3 3 0 11-6 0V7a1 1 0 012 0v4a1 1 0 102 0V7a3 3 0 00-3-3z" clipRule="evenodd"></path>
-                                  </svg>
-                                  <p className="text-sm font-semibold">{file.filename}</p>
-                                </div>
-                                <div className="border-2 border-red-300 rounded-lg overflow-hidden bg-red-50">
-                                  <iframe
-                                    src={authenticatedUrl}
-                                    className="w-full h-[800px]"
-                                    title={file.filename}
-                                  />
-                                </div>
-                              </div>
-                            )}
-                            {!isVideo && !isHTML && !isPDF && (
-                              <a
-                                href={authenticatedUrl}
-                                target="_blank"
-                                rel="noopener noreferrer"
-                                className="inline-flex items-center gap-3 bg-gradient-to-r from-blue-50 to-blue-100 hover:from-blue-100 hover:to-blue-200 px-4 py-3 rounded-lg text-blue-600 hover:text-blue-700 font-medium transition-colors"
-                              >
-                                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-                                </svg>
-                                <div className="text-left">
-                                  <p className="text-sm font-semibold">Download</p>
-                                  <p className="text-xs text-blue-500">{file.filename}</p>
-                                </div>
-                              </a>
-                            )}
+                              )}
+                            </div>
+                          );
+                        })}
+                    </div>
+
+                    {/* Sidebar - Title and Info */}
+                    {selectedModule.name && (
+                      <div className="w-80">
+                        <div className="bg-gradient-to-br from-orange-50 to-orange-100 rounded-xl p-6 border-2 border-orange-200 sticky top-24">
+                          <h3 className="text-lg font-bold text-gray-900 mb-4 text-orange-900">📹 Lesson</h3>
+                          <p className="text-gray-700 font-semibold leading-relaxed">{selectedModule.name}</p>
+                          {selectedModule.contents && (
+                            <div className="mt-4 pt-4 border-t border-orange-300 text-sm text-gray-700">
+                              <p><strong>Videos:</strong> {selectedModule.contents.filter(f => f.filename?.match(/\.(mp4|webm|ogg|mov|avi|mkv)$/i)).length}</p>
+                            </div>
+                          )}
                         </div>
-                      );
-                    })}
+                      </div>
+                    )}
                   </div>
                 )}
 

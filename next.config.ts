@@ -1,6 +1,13 @@
 import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
+  /* Production optimization */
+  compress: true,
+  poweredByHeader: false,
+  
+  /* React optimization */
+  reactStrictMode: true,
+  
   images: {
     remotePatterns: [
       {
@@ -24,9 +31,8 @@ const nextConfig: NextConfig = {
     ],
     // Enable automatic image optimization
     formats: ['image/avif', 'image/webp'],
+    minimumCacheTTL: 31536000, // 1 year cache for optimized images
   },
-  // Enable compression
-  compress: true,
   // Optimize production builds
   productionBrowserSourceMaps: false,
   // Reduce initial page load

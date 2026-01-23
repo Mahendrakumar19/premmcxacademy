@@ -42,43 +42,30 @@ function DashboardContent() {
   const loadDashboardData = useCallback(async () => {
     try {
       setLoading(true);
-      const userId = session?.user?.id;
-      const token = (session?.user as { token?: string })?.token;
       
-      if (!userId || !token) {
-        setLoading(false);
-        return;
+      console.log('📊 Dashboard: Fetching dashboard data via API');
+      
+      // Fetch from optimized dashboard API
+      const response = await fetch('/api/dashboard', {
+        cache: 'no-store',
+      });
+      
+      if (!response.ok) {
+        throw new Error('Failed to fetch dashboard data');
       }
       
-      const userCourses = await getUserCourses(parseInt(userId), token);
+      const data = await response.json();
       
-      setCourses(userCourses);
+      console.log(`✅ Dashboard: Loaded ${data.courses.length} enrolled courses`);
       
-      // Calculate stats
-      const inProgress = userCourses.filter((c: Course) => c.progress && c.progress > 0 && c.progress < 100).length;
-      const completed = userCourses.filter((c: Course) => c.progress === 100).length;
-      
-      // Calculate total hours based on actual progress (hours per course based on completion)
-      const totalHours = userCourses.reduce((hours: number, course: Course) => {
-        // Base course duration in hours
-        const courseDuration = 40; // Each course is typically 40 hours
-        // Hours completed = course duration * (progress / 100)
-        const hoursCompleted = courseDuration * ((course.progress || 0) / 100);
-        return hours + hoursCompleted;
-      }, 0);
-      
-      setStats({
-        totalCourses: userCourses.length,
-        inProgressCourses: inProgress,
-        completedCourses: completed,
-        totalHours: Math.round(totalHours),
-      });
+      setCourses(data.courses);
+      setStats(data.stats);
     } catch (error) {
-      console.error('Error loading dashboard:', error);
+      console.error('❌ Dashboard: Error loading courses:', error);
     } finally {
       setLoading(false);
     }
-  }, [session]);
+  }, []);
 
   useEffect(() => {
     if (searchParams.get('enrolled') === 'true' || searchParams.get('welcome') === 'true') {
@@ -292,15 +279,25 @@ function DashboardContent() {
                   href={`/learn/${course.id}`}
                   className="bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden hover:shadow-md transition-shadow"
                 >
-                  <div className="relative h-40 bg-linear-to-br from-blue-500 to-purple-600">
-                    {course.courseimage && (
+                  <div className="relative h-48 bg-linear-to-br from-indigo-500 via-purple-500 to-pink-500 overflow-hidden">
+                    {course.courseimage ? (
                       <img
                         src={(course.courseimage?.includes('lms.prem') || course.courseimage?.includes('pluginfile')) 
                           ? `/api/proxy-image?url=${encodeURIComponent(course.courseimage)}`
                           : course.courseimage}
                         alt={course.fullname}
                         className="w-full h-full object-cover"
+                        onError={(e) => {
+                          // Hide image if it fails to load
+                          e.currentTarget.style.display = 'none';
+                        }}
                       />
+                    ) : (
+                      <div className="w-full h-full flex items-center justify-center">
+                        <svg className="w-24 h-24 text-white/30" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253" />
+                        </svg>
+                      </div>
                     )}
                     <div className="absolute inset-0 bg-linear-to-t from-black/50 to-transparent" />
                     <div className="absolute bottom-3 left-3 right-3">

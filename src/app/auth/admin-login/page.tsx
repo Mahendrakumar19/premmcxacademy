@@ -27,13 +27,19 @@ export default function AdminLoginPage() {
       });
 
       if (result?.error) {
+        console.error("❌ Admin login error:", result.error);
         setError("Invalid admin credentials");
         setLoading(false);
         return;
       }
 
-      // Redirect to LMS website
-      window.location.href = "https://lms.premmcxtrainingacademy.com";
+      console.log("✅ Admin login successful");
+      // Redirect to admin dashboard instead of LMS
+      setTimeout(() => {
+        console.log("📍 Redirecting admin to dashboard");
+        router.push("/dashboard");
+        router.refresh();
+      }, 500);
     } catch (err) {
       setError("An error occurred during login");
       setLoading(false);

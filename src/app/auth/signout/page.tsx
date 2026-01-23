@@ -1,21 +1,28 @@
 "use client";
 import React, { useEffect } from "react";
 import { signOut } from "next-auth/react";
+import { useRouter } from "next/navigation";
 import Link from "next/link";
 import Image from "next/image";
 
 export default function SignOutPage() {
+  const router = useRouter();
+  
   useEffect(() => {
-    // Immediately sign out without delay
+    // Sign out and redirect smoothly
     const performSignOut = async () => {
       await signOut({ 
-        redirect: true, 
-        callbackUrl: "https://premmcxtrainingacademy.com" 
+        redirect: false
       });
+      // Wait for session to clear
+      await new Promise(resolve => setTimeout(resolve, 300));
+      // Navigate to home
+      router.push("/");
+      router.refresh();
     };
     
     performSignOut();
-  }, []);
+  }, [router]);
 
   return (
     <div className="min-h-screen bg-gray-50 flex flex-col">
