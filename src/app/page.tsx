@@ -5,6 +5,7 @@ import Navbar from '@/components/Navbar';
 import { useCart } from '@/context/CartContext';
 import { useRouter } from 'next/navigation';
 import { useSession } from 'next-auth/react';
+import { generateCourseImagePlaceholder } from '@/lib/course-placeholder';
 
 interface Course {
   id: number;
@@ -41,7 +42,16 @@ export default function HomePage() {
 
   const fetchCourses = async () => {
     try {
-      const res = await fetch('/api/courses', { cache: 'no-store' });
+      // Force no-cache with timestamp to bypass browser cache
+      const timestamp = new Date().getTime();
+      const res = await fetch(`/api/courses?t=${timestamp}`, { 
+        cache: 'no-store',
+        headers: {
+          'Cache-Control': 'no-cache, no-store, must-revalidate',
+          'Pragma': 'no-cache',
+          'Expires': '0'
+        }
+      });
       if (!res.ok) {
         const errorData = await res.json();
         console.error('API Error:', errorData);
@@ -303,53 +313,44 @@ export default function HomePage() {
           ) : (
             <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-8">
               {filteredCourses.map((course) => {
-                // Get image URL from backend
+                // Get image URL from backend (if any)
                 const rawImageUrl = course.courseimage || 
                                  course.overviewfiles?.[0]?.fileurl || 
                                  null;
                 
                 // If it's a Moodle image URL, use the proxy
-                // Proxy URLs that contain Moodle domain or are pluginfile paths
                 const isMoodleUrl = rawImageUrl && (
                   rawImageUrl.includes('lms.prem') || 
                   rawImageUrl.includes('pluginfile') ||
                   rawImageUrl.includes('draftfile') ||
                   rawImageUrl.includes('/course/overview') ||
-                  rawImageUrl.includes('http') // Absolute URLs from Moodle
+                  rawImageUrl.includes('http')
                 );
                 
-                const imageUrl = isMoodleUrl && rawImageUrl
+                const moodleImageUrl = isMoodleUrl && rawImageUrl
                   ? `/api/proxy-image?url=${encodeURIComponent(rawImageUrl)}`
                   : rawImageUrl;
+                
+                // Generate placeholder image based on course
+                const placeholderImageUrl = generateCourseImagePlaceholder(course.fullname, course.id);
+                
+                // Use Moodle image if available, otherwise use placeholder
+                const imageUrl = moodleImageUrl || placeholderImageUrl;
                 
                 return (
                 <div
                   key={course.id}
                   className="group bg-white rounded-2xl shadow-md hover:shadow-2xl transition-all duration-300 overflow-hidden border border-gray-100 hover:border-indigo-200 transform hover:-translate-y-2"
                 >
-                  {/* Course Header - Image or Gradient */}
-                  <div className="relative h-48 bg-gradient-to-br from-blue-100 via-purple-100 to-pink-100 overflow-hidden">
-                    {imageUrl ? (
-                      <img 
-                        src={imageUrl} 
-                        alt={course.fullname}
-                        className="w-full h-full object-cover"
-                        onError={(e) => {
-                          // On image load failure, show the gradient by hiding the image
-                          e.currentTarget.style.display = 'none';
-                          // Show the book icon
-                          const parent = e.currentTarget.nextElementSibling as HTMLElement;
-                          if (parent) parent.style.display = 'flex';
-                        }}
-                      />
-                    ) : null}
-                    
-                    {/* Fallback Icon when no image or image fails */}
-                    <div className="absolute inset-0 flex items-center justify-center bg-gradient-to-br from-gray-100 to-gray-200" style={{display: imageUrl ? 'none' : 'flex'}}>
-                      <svg className="w-24 h-24 text-gray-400/50" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253" />
-                      </svg>
-                    </div>
+                  {/* Course Header - Image */}
+                  <div className="relative h-56 overflow-hidden">
+                    <img 
+                      src={imageUrl} 
+                      alt={course.fullname}
+                      className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+                      loading="lazy"
+                      decoding="async"
+                    />
                     
                     {/* Category Badge */}
                     {course.categoryname && (

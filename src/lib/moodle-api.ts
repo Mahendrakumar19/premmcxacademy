@@ -5,6 +5,35 @@ const MOODLE_URL = process.env.MOODLE_URL || process.env.NEXT_PUBLIC_MOODLE_URL 
 const MOODLE_TOKEN = process.env.MOODLE_TOKEN || '';
 const MOODLE_COURSE_TOKEN = process.env.MOODLE_COURSE_TOKEN || '';
 
+/**
+ * Extract YouTube video ID from various YouTube URL formats
+ * Supports: https://youtube.com/watch?v=VIDEO_ID, https://youtu.be/VIDEO_ID, youtube.com/embed/VIDEO_ID
+ */
+export function extractYouTubeVideoId(url: string): string | null {
+  if (!url) return null;
+
+  // Match youtube.com/watch?v=ID
+  let match = url.match(/(?:youtube\.com\/watch\?v=|youtu\.be\/|youtube\.com\/embed\/)([^&\n?#]+)/);
+  if (match && match[1]) {
+    return match[1];
+  }
+
+  // Match other formats
+  match = url.match(/^.*(?:youtu.be\/|v\/|u\/\w\/|embed\/|watch\?v=)([^#&?]*).*/);
+  if (match && match[1]) {
+    return match[1];
+  }
+
+  return null;
+}
+
+/**
+ * Check if URL is a YouTube video
+ */
+export function isYouTubeUrl(url: string): boolean {
+  return !!url && (url.includes('youtube.com') || url.includes('youtu.be'));
+}
+
 // Simple in-memory cache for API calls (TTL: 5 minutes)
 const apiCache = new Map<string, { data: any; expires: number }>();
 
@@ -97,6 +126,32 @@ export async function callMoodleAPI(
 // Get all available courses
 export async function getAllCourses() {
   return callMoodleAPI('core_course_get_courses', {}, undefined, true);
+}
+
+// Get course overview files (images) with full URLs
+export async function getCourseOverviewFiles(courseId: number, token?: string) {
+  try {
+    const files = await callMoodleAPI('core_course_get_overview_files', {
+      'courseids[]': courseId
+    }, token, true);
+    
+    if (Array.isArray(files) && files.length > 0) {
+      // Moodle returns array of course objects with their files
+      const course = files.find((c: any) => c.id === courseId);
+      if (course && course.files && Array.isArray(course.files) && course.files.length > 0) {
+        // Get the first file (usually the course image)
+        const imageFile = course.files[0];
+        if (imageFile.fileurl) {
+          console.log(`📸 Course ${courseId} overview file URL: ${imageFile.fileurl}`);
+          return imageFile.fileurl;
+        }
+      }
+    }
+    return null;
+  } catch (err) {
+    console.log(`⚠️ Could not fetch course overview files for course ${courseId}:`, err);
+    return null;
+  }
 }
 
 // Get enrollment instances for a course (includes fee details from enrol_fee plugin)
@@ -267,11 +322,24 @@ export async function getAllCoursesWithEnrolment(token?: string) {
         }
       }
 
-      // Extract course image - try multiple sources
+      // Extract course image - try multiple sources with priority
       let courseimage = null;
       
+      // Try source 0: Use core_course_get_overview_files API (BEST - gets actual file URLs)
+      if (!courseimage) {
+        try {
+          courseimage = await getCourseOverviewFiles(course.id, token);
+          if (courseimage) {
+            courseimage = normalizePluginfileUrl(courseimage);
+            console.log(`📸 [${course.id}] Image from core_course_get_overview_files: ${courseimage}`);
+          }
+        } catch (err) {
+          console.log(`⚠️ Could not fetch overview files for course ${course.id}: ${err}`);
+        }
+      }
+      
       // Try source 1: overviewfiles array (from API response)
-      if (course.overviewfiles && Array.isArray(course.overviewfiles) && course.overviewfiles.length > 0) {
+      if (!courseimage && course.overviewfiles && Array.isArray(course.overviewfiles) && course.overviewfiles.length > 0) {
         const imageUrl = course.overviewfiles[0].fileurl;
         courseimage = imageUrl ? normalizePluginfileUrl(imageUrl) : null;
         if (courseimage) console.log(`📸 [${course.id}] Image from overviewfiles: ${courseimage}`);
@@ -289,17 +357,9 @@ export async function getAllCoursesWithEnrolment(token?: string) {
         if (courseimage) console.log(`📸 [${course.id}] Image from imageurl: ${courseimage}`);
       }
       
-      // Try source 4: Construct from Moodle directly if available
-      // Moodle stores course images in: /pluginfile.php/COURSEID/course/overviewfiles/FILENAME
-      if (!courseimage && MOODLE_URL) {
-        // First, try the standard course overview image location
-        const overviewImageUrl = `${MOODLE_URL}/pluginfile.php/${course.id}/course/overviewfiles/`;
-        console.log(`📸 [${course.id}] Constructed Moodle course image URL: ${overviewImageUrl}`);
-        courseimage = overviewImageUrl;
-      }
-      
+      // Fallback: Return null if no image found - frontend will use gradient
       if (!courseimage) {
-        console.log(`📸 [${course.id}] ⚠️ Could not determine image for course: ${course.fullname}`);
+        console.log(`📸 [${course.id}] ⚠️ No image found for: ${course.fullname}`);
       }
 
       return {
@@ -419,6 +479,62 @@ export async function getCourseById(courseId: number, token?: string) {
     return null;
   } catch (error) {
     console.error('Error in getCourseById:', error);
+    return null;
+  }
+}
+
+/**
+ * Fetch course image URL
+ * Uses the core_course_get_courses_by_field endpoint with additional fields
+ * to retrieve the course's primary image (equivalent to Moodle's course_summary_exporter::get_course_image)
+ */
+export async function getCourseImage(courseId: number, token?: string): Promise<string | null> {
+  try {
+    // Try fetching with image and overviewfiles fields
+    const response = await callMoodleAPI('core_course_get_courses_by_field', {
+      field: 'id',
+      value: courseId,
+      options: JSON.stringify({
+        'summaryformat': 1,
+        'coverfiles': 1
+      })
+    }, token, true);
+
+    if (response?.courses?.[0]) {
+      const course = response.courses[0];
+      
+      // Check for overviewfiles (course overview image)
+      if (course.overviewfiles && Array.isArray(course.overviewfiles) && course.overviewfiles.length > 0) {
+        const imageFile = course.overviewfiles[0];
+        if (imageFile.fileurl) {
+          return imageFile.fileurl;
+        }
+      }
+      
+      // Check for coverimageurl (Moodle 3.6+)
+      if (course.coverimageurl) {
+        return course.coverimageurl;
+      }
+      
+      // Check for courseimage field (some Moodle versions)
+      if (course.courseimage) {
+        return course.courseimage;
+      }
+    }
+
+    // Fallback: fetch full course data and extract image from there
+    const fullCourse = await getCourseById(courseId, token);
+    if (fullCourse?.overviewfiles?.[0]?.fileurl) {
+      return fullCourse.overviewfiles[0].fileurl;
+    }
+    
+    if (fullCourse?.coverimageurl) {
+      return fullCourse.coverimageurl;
+    }
+
+    return null;
+  } catch (error) {
+    console.error(`Error fetching course image for course ${courseId}:`, error);
     return null;
   }
 }

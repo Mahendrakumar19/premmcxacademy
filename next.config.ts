@@ -39,24 +39,60 @@ const nextConfig: NextConfig = {
   experimental: {
     optimizePackageImports: ['next-auth'],
   },
-  // Add custom headers for caching
+  // Add custom headers for caching - NO cache for HTML pages, aggressive cache for static assets
   async headers() {
     return [
+      // No caching for HTML pages - force fresh content every time
+      {
+        source: '/:path((?!_next|api|static).*)',
+        headers: [
+          {
+            key: 'Cache-Control',
+            value: 'public, max-age=0, must-revalidate'
+          },
+          {
+            key: 'Pragma',
+            value: 'no-cache'
+          }
+        ]
+      },
+      // Short cache for API routes
       {
         source: '/api/:path*',
         headers: [
           {
             key: 'Cache-Control',
-            value: 'public, max-age=60'
+            value: 'public, max-age=0, must-revalidate'
           }
         ]
       },
+      // Aggressive cache for Next.js static assets
       {
         source: '/_next/static/:path*',
         headers: [
           {
             key: 'Cache-Control',
             value: 'public, max-age=31536000, immutable'
+          }
+        ]
+      },
+      // Cache images aggressively
+      {
+        source: '/images/:path*',
+        headers: [
+          {
+            key: 'Cache-Control',
+            value: 'public, max-age=31536000, immutable'
+          }
+        ]
+      },
+      // Disable cache for proxy endpoints
+      {
+        source: '/api/proxy-image',
+        headers: [
+          {
+            key: 'Cache-Control',
+            value: 'public, max-age=300, s-maxage=300'
           }
         ]
       }

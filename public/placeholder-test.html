@@ -1,0 +1,98 @@
+<!DOCTYPE html>
+<html>
+<head>
+<title>Placeholder Image Test</title>
+</head>
+<body>
+<h1>Placeholder Image Generation Test</h1>
+
+<div id="test-container"></div>
+
+<script>
+function generateCourseImagePlaceholder(courseName, courseId) {
+  const colors = [
+    '#0066CC', // Blue
+    '#7B2CBF', // Purple
+    '#E63946', // Red
+    '#FF7B54', // Orange
+    '#06D6A0', // Green
+    '#118AB2', // Teal
+    '#073B4C', // Dark Teal
+    '#F4A261', // Gold
+    '#E76F51', // Rust
+    '#264653', // Dark Blue
+  ];
+
+  const colorIndex = courseId % colors.length;
+  const bgColor = colors[colorIndex];
+  const title = courseName.substring(0, 3).toUpperCase();
+
+  const shadeColor = (color, percent) => {
+    const num = parseInt(color.replace('#', ''), 16);
+    const amt = Math.round(2.55 * percent);
+    const R = (num >> 16) + amt;
+    const G = (num >> 8 & 0x00FF) + amt;
+    const B = (num & 0x0000FF) + amt;
+    return '#' + (0x1000000 + (R < 255 ? R < 1 ? 0 : R : 255) * 0x10000 +
+      (G < 255 ? G < 1 ? 0 : G : 255) * 0x100 +
+      (B < 255 ? B < 1 ? 0 : B : 255))
+      .toString(16).slice(1);
+  };
+
+  const svg = `
+    <svg width="400" height="300" xmlns="http://www.w3.org/2000/svg">
+      <defs>
+        <linearGradient id="grad${courseId}" x1="0%" y1="0%" x2="100%" y2="100%">
+          <stop offset="0%" style="stop-color:${bgColor};stop-opacity:1" />
+          <stop offset="100%" style="stop-color:${shadeColor(bgColor, -0.3)};stop-opacity:1" />
+        </linearGradient>
+      </defs>
+      <rect width="400" height="300" fill="url(#grad${courseId})"/>
+      <circle cx="50" cy="50" r="40" fill="rgba(255,255,255,0.1)"/>
+      <circle cx="350" cy="250" r="50" fill="rgba(255,255,255,0.1)"/>
+      <rect x="150" y="80" width="100" height="100" fill="rgba(255,255,255,0.05)" rx="10"/>
+      <text x="200" y="140" font-size="48" font-weight="bold" fill="white" text-anchor="middle" font-family="Arial, sans-serif">
+        ${title}
+      </text>
+      <text x="200" y="200" font-size="16" fill="rgba(255,255,255,0.9)" text-anchor="middle" font-family="Arial, sans-serif" word-spacing="5">
+        ${courseName.substring(0, 30)}
+      </text>
+    </svg>
+  `;
+
+  return `data:image/svg+xml;base64,${btoa(svg)}`;
+}
+
+// Test with the courses we found
+const courses = [
+  { id: 2, name: 'Demo Course' },
+  { id: 3, name: 'Basic Course' },
+  { id: 4, name: 'Course full name' },
+  { id: 5, name: 'BASIC TO ADVANCE' },
+];
+
+const container = document.getElementById('test-container');
+
+courses.forEach(course => {
+  const imageUrl = generateCourseImagePlaceholder(course.name, course.id);
+  const div = document.createElement('div');
+  div.style.display = 'inline-block';
+  div.style.marginRight = '20px';
+  div.style.marginBottom = '20px';
+  
+  const img = document.createElement('img');
+  img.src = imageUrl;
+  img.width = 300;
+  img.height = 225;
+  img.style.borderRadius = '8px';
+  
+  const p = document.createElement('p');
+  p.textContent = `${course.name} (ID: ${course.id})`;
+  
+  div.appendChild(img);
+  div.appendChild(p);
+  container.appendChild(div);
+});
+</script>
+</body>
+</html>

@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
+import https from 'https';
 
 /**
  * Proxy images and files from Moodle with proper authentication
@@ -24,12 +25,19 @@ export async function GET(request: NextRequest) {
 
     console.log('🖼️ Proxying image/file from:', finalUrl);
 
+    // Create custom agent to handle self-signed certificates
+    const agent = new https.Agent({
+      rejectUnauthorized: false,
+    });
+
     const response = await fetch(finalUrl, {
       headers: {
         'User-Agent': 'Mozilla/5.0 (compatible; PremMCX/1.0)',
       },
       // Set a timeout for the request - use 60 seconds for slow servers
       signal: AbortSignal.timeout(60000),
+      // @ts-ignore - agent is not in the standard types but works with Node.js
+      agent: finalUrl.startsWith('https') ? agent : undefined,
     });
 
     if (!response.ok) {

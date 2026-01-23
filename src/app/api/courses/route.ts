@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { getAllCoursesWithEnrolment } from '@/lib/moodle-api';
+import { getAllCoursesWithEnrolment, getCourseImage } from '@/lib/moodle-api';
 
 export async function GET(request: Request) {
   try {
@@ -21,7 +21,7 @@ export async function GET(request: Request) {
     console.log(`📊 API: Received ${courses.length} courses from moodle-api`);
 
     // Transform courses to include proper pricing and image data
-    const transformedCourses = courses.map((course: any) => {
+    const transformedCourses = await Promise.all(courses.map(async (course: any) => {
       try {
         // Use values already extracted by getAllCoursesWithEnrolment if available
         let displayPrice = course.displayPrice || null;
@@ -52,8 +52,15 @@ export async function GET(request: Request) {
         // Final price for payment logic
         const actualPrice = cost || displayPrice;
 
-        // Safely extract image URL from backend
-        let courseimage = course.courseimage || null;
+        // Fetch course image using the getCourseImage function (equivalent to Moodle's course_summary_exporter)
+        let courseimage = await getCourseImage(course.id, token);
+        
+        // Fallback to course.courseimage if getCourseImage returns null
+        if (!courseimage) {
+          courseimage = course.courseimage || null;
+        }
+        
+        // Fallback to overviewfiles
         if (!courseimage && course.overviewfiles && Array.isArray(course.overviewfiles) && course.overviewfiles.length > 0) {
           courseimage = course.overviewfiles[0].fileurl;
         }
@@ -107,7 +114,7 @@ export async function GET(request: Request) {
           error: true
         };
       }
-    });
+    }));
     
     console.log(`✅ API: Returning ${transformedCourses.length} transformed courses`);
 

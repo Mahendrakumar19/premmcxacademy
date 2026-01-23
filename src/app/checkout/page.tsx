@@ -71,12 +71,6 @@ export default function CheckoutPage() {
             {/* Action Buttons */}
             <div className="space-y-3">
               <button
-                onClick={() => window.location.href = process.env.NEXT_PUBLIC_MOODLE_URL || 'https://lms.premmcxtrainingacademy.com'}
-                className="w-full px-6 py-3 bg-green-600 text-white font-semibold rounded-lg hover:bg-green-700 transition-colors shadow-md"
-              >
-                Go to LMS Dashboard
-              </button>
-              <button
                 onClick={() => router.push('/courses')}
                 className="w-full px-6 py-3 bg-indigo-600 text-white font-semibold rounded-lg hover:bg-indigo-700 transition-colors"
               >

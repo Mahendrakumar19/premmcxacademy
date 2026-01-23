@@ -66,6 +66,7 @@ export default function CourseLearningPage({ params }: { params: Promise<{ id: s
   const [sections, setSections] = useState<CourseSection[]>([]);
   const [loading, setLoading] = useState(true);
   const [selectedModule, setSelectedModule] = useState<CourseModule | null>(null);
+  const [resolvedModuleUrl, setResolvedModuleUrl] = useState<string | null>(null);
   const [forumDiscussions, setForumDiscussions] = useState<ForumDiscussion[]>([]);
   const [loadingContent, setLoadingContent] = useState(false);
 
@@ -141,6 +142,7 @@ export default function CourseLearningPage({ params }: { params: Promise<{ id: s
 
   const handleModuleSelect = async (module: CourseModule) => {
     setSelectedModule(module);
+    setResolvedModuleUrl(null);
     setForumDiscussions([]);
     
     // Debug: Log module data to console
@@ -155,6 +157,29 @@ export default function CourseLearningPage({ params }: { params: Promise<{ id: s
       contents: module.contents || [],
       description: module.description ? `${module.description.substring(0, 100)}...` : '(no description)',
     });
+    
+    // If it's a URL module pointing to Moodle, extract the real video URL
+    if (module.modname === 'url' && module.url?.includes('/mod/url/view.php')) {
+      console.log('🎥 Detected Moodle URL module, extracting video URL from Moodle...');
+      try {
+        const response = await fetch(`/api/extract-video-url?url=${encodeURIComponent(module.url)}`);
+        if (response.ok) {
+          const videoData = await response.json();
+          console.log(`✅ Extracted ${videoData.type} video URL:`, videoData.videoUrl);
+          setResolvedModuleUrl(videoData.videoUrl);
+        } else {
+          console.warn('⚠️ Failed to extract video URL, will try direct playback');
+          setResolvedModuleUrl(module.url);
+        }
+      } catch (error) {
+        console.error('❌ Error extracting video URL:', error);
+        setResolvedModuleUrl(module.url);
+      }
+    } else if (module.modname === 'url' && module.url) {
+      // If it's already a direct URL (YouTube, Vimeo, etc.), use it directly
+      console.log('🔗 Direct URL detected, using as-is');
+      setResolvedModuleUrl(module.url);
+    }
     
     // Fetch content based on module type
     if (module.modname === 'forum' && module.instance) {
@@ -198,6 +223,8 @@ export default function CourseLearningPage({ params }: { params: Promise<{ id: s
       </div>
     );
   }
+
+
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -263,21 +290,23 @@ export default function CourseLearningPage({ params }: { params: Promise<{ id: s
           <div className="lg:col-span-3">
             {selectedModule ? (
               <div className="bg-gradient-to-br from-white to-gray-50 rounded-xl shadow-md border border-gray-200 overflow-hidden">
-                {/* Header Section */}
-                <div className="bg-gradient-to-r from-orange-500 via-orange-400 to-red-500 px-8 py-6 text-white">
-                  {selectedModule.modname !== 'page' && (
-                    <div>
-                      <div className="flex items-center gap-3 mb-2">
-                        <span className="text-3xl">{getModuleIcon(selectedModule.modname)}</span>
-                        <h1 className="text-3xl font-bold">{selectedModule.name || `${selectedModule.modname} Module`}</h1>
+                {/* Header Section - Hidden for URL modules (video pages) */}
+                {selectedModule.modname !== 'url' && (
+                  <div className="bg-gradient-to-r from-blue-600 to-blue-700 px-8 py-6 text-white">
+                    {selectedModule.modname !== 'page' && (
+                      <div>
+                        <div className="flex items-center gap-3 mb-2">
+                          <span className="text-3xl">{getModuleIcon(selectedModule.modname)}</span>
+                          <h1 className="text-3xl font-bold">{selectedModule.name || `${selectedModule.modname} Module`}</h1>
+                        </div>
+                        <p className="text-blue-100 text-sm font-medium capitalize">{selectedModule.modname || 'module'} • {selectedModule.modplural || ''}</p>
                       </div>
-                      <p className="text-orange-100 text-sm font-medium capitalize">{selectedModule.modname || 'module'} • {selectedModule.modplural || ''}</p>
-                    </div>
-                  )}
-                </div>
+                    )}
+                  </div>
+                )}
 
                 {/* Content Section */}
-                <div className="p-8">
+                <div className={selectedModule.modname === 'url' ? 'p-0' : 'p-8'}>
 
                 {selectedModule.description && (
                   <div className="mb-8 pb-8 border-b border-gray-200">
@@ -362,9 +391,12 @@ export default function CourseLearningPage({ params }: { params: Promise<{ id: s
                 
                 {selectedModule.url && selectedModule.modname === 'url' && (
                   <div className="mb-8">
-                    <div className="bg-gray-900 rounded-xl overflow-hidden shadow-xl">
+                    {/* Simple YouTube/Vimeo Player - Full dimensions, no borders */}
+                    <div className="bg-black overflow-hidden">
                       {(() => {
-                        const url = selectedModule.url;
+                        // Use resolved URL if available, otherwise fall back to selectedModule.url
+                        // The resolved URL will be extracted from Moodle URL module redirects
+                        const url = resolvedModuleUrl || selectedModule.url;
                         
                         // YouTube video
                         if (url.includes('youtube.com/watch') || url.includes('youtu.be/')) {
@@ -374,10 +406,10 @@ export default function CourseLearningPage({ params }: { params: Promise<{ id: s
                           
                           if (videoId) {
                             return (
-                              <div className="relative w-full" style={{ paddingBottom: '56.25%' }}>
+                              <div className="relative w-full bg-black" style={{ paddingBottom: '56.25%' }}>
                                 <iframe
                                   src={`https://www.youtube.com/embed/${videoId}`}
-                                  className="absolute top-0 left-0 w-full h-full"
+                                  className="absolute top-0 left-0 w-full h-full border-0"
                                   title={selectedModule.name}
                                   allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
                                   allowFullScreen
@@ -392,10 +424,10 @@ export default function CourseLearningPage({ params }: { params: Promise<{ id: s
                           const videoId = url.split('vimeo.com/')[1]?.split('?')[0];
                           if (videoId) {
                             return (
-                              <div className="relative w-full" style={{ paddingBottom: '56.25%' }}>
+                              <div className="relative w-full bg-black" style={{ paddingBottom: '56.25%' }}>
                                 <iframe
                                   src={`https://player.vimeo.com/video/${videoId}`}
-                                  className="absolute top-0 left-0 w-full h-full"
+                                  className="absolute top-0 left-0 w-full h-full border-0"
                                   title={selectedModule.name}
                                   allow="autoplay; fullscreen; picture-in-picture"
                                   allowFullScreen
@@ -412,7 +444,7 @@ export default function CourseLearningPage({ params }: { params: Promise<{ id: s
                               controls
                               controlsList="nodownload"
                               disablePictureInPicture
-                              className="w-full"
+                              className="w-full bg-black"
                               src={url}
                               preload="metadata"
                             >
@@ -469,9 +501,9 @@ export default function CourseLearningPage({ params }: { params: Promise<{ id: s
 
                 {/* Show Videos ONLY - No other file types */}
                 {selectedModule.contents && selectedModule.contents.length > 0 && (
-                  <div className="flex gap-6">
+                  <div className={selectedModule.modname === 'url' ? 'w-full' : 'flex gap-6'}>
                     {/* Video Player - Main Content */}
-                    <div className="flex-1">
+                    <div className={selectedModule.modname === 'url' ? 'w-full' : 'flex-1'}>
                       {selectedModule.contents
                         .filter((file) => {
                           // Show ONLY video files
@@ -516,7 +548,7 @@ export default function CourseLearningPage({ params }: { params: Promise<{ id: s
                     </div>
 
                     {/* Sidebar - Title and Info */}
-                    {selectedModule.name && (
+                    {selectedModule.name && selectedModule.modname !== 'url' && (
                       <div className="w-80">
                         <div className="bg-gradient-to-br from-orange-50 to-orange-100 rounded-xl p-6 border-2 border-orange-200 sticky top-24">
                           <h3 className="text-lg font-bold text-gray-900 mb-4 text-orange-900">📹 Lesson</h3>
