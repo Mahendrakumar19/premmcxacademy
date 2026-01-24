@@ -19,6 +19,7 @@ interface Course {
   displayPrice?: number | string;
   cost?: string;
   currency?: string;
+  gst?: string | number;
   courseimage?: string;
   imageurl?: string;
   overviewfiles?: Array<{ fileurl: string }>;
@@ -119,14 +120,21 @@ export default function HomePage() {
       ? `/api/proxy-image?url=${encodeURIComponent(rawImageUrl)}`
       : rawImageUrl;
     
+    // Calculate final price with GST
+    const basePrice = parseFloat(String(course.displayPrice || course.price || '0'));
+    const gstRate = course.gst ? parseInt(String(course.gst)) : 0;
+    // Pass base price to cart, GST will be calculated there
+    const cartPrice = basePrice;
+    
     // Check if user is logged in
     if (status === 'unauthenticated') {
       // Store the course to add after login
       sessionStorage.setItem('pendingAddToCart', JSON.stringify({
         courseId: course.id,
         courseName: course.fullname,
-        cost: String(course.displayPrice || course.price || '0'),
+        cost: String(cartPrice.toFixed(2)),
         currency: course.currency || 'INR',
+        gst: gstRate,
         thumbnailUrl: imageUrl,
       }));
       
@@ -139,8 +147,9 @@ export default function HomePage() {
     addToCart({
       courseId: course.id,
       courseName: course.fullname,
-      cost: String(course.displayPrice || course.price || '0'),
+      cost: String(cartPrice.toFixed(2)),
       currency: course.currency || 'INR',
+      gst: gstRate,
       thumbnailUrl: imageUrl,
     });
   };
@@ -389,31 +398,37 @@ export default function HomePage() {
                     </div>
 
                     {/* Price and Actions */}
-                    <div className="flex items-center justify-between pt-4 border-t border-gray-100">
-                      <div>
+                    <div className="pt-4 border-t border-gray-100">
+                      <div className="mb-4">
                         {course.displayPrice && parseFloat(String(course.displayPrice)) > 0 ? (
                           <div>
-                            <span className="text-2xl font-bold text-indigo-600">₹ {parseFloat(String(course.displayPrice)).toLocaleString('en-IN')}</span>
+                            {(() => {
+                              const basePrice = parseFloat(String(course.displayPrice));
+                              return (
+                                <span className="text-2xl font-bold text-indigo-600">
+                                  ₹ {basePrice.toLocaleString('en-IN')}
+                                </span>
+                              );
+                            })()}
                           </div>
                         ) : (
                           <span className="text-xl font-bold text-green-600">Free</span>
                         )}
                       </div>
+
                       <div className="flex gap-2">
                         <button
                           onClick={() => router.push(`/courses/${course.id}`)}
-                          className="px-4 py-2 bg-indigo-600 text-white rounded-lg font-medium hover:bg-indigo-700 transition-colors shadow-md hover:shadow-lg"
+                          className="flex-1 px-4 py-2 bg-indigo-600 text-white rounded-lg font-medium hover:bg-indigo-700 transition-colors shadow-md hover:shadow-lg"
                         >
                           View Details
                         </button>
                         <button
                           onClick={() => handleAddToCart(course)}
-                          className="p-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-indigo-100 hover:text-indigo-600 transition-colors"
-                          title="Add to Cart / Enroll"
+                          className="flex-1 px-4 py-2 bg-orange-500 text-white rounded-lg font-medium hover:bg-orange-600 transition-colors shadow-md hover:shadow-lg"
+                          title="Buy Now"
                         >
-                          <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 3h2l.4 2M7 13h10l4-8H5.4M7 13L5.4 5M7 13l-2.293 2.293c-.63.63-.184 1.707.707 1.707H17m0 0a2 2 0 100 4 2 2 0 000-4zm-8 2a2 2 0 11-4 0 2 2 0 014 0z" />
-                          </svg>
+                          Buy Now
                         </button>
                       </div>
                     </div>

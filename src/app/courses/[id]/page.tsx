@@ -21,6 +21,7 @@ interface Course {
   cost?: string;
   displayPrice?: string | number;
   currency?: string;
+  gst?: string | number;
   enrolled?: boolean;
   courseimage?: string;
   imageurl?: string;
@@ -36,6 +37,8 @@ export default function CourseDetailPage({ params }: { params: Promise<{ id: str
   const [loading, setLoading] = useState(true);
   const [enrolled, setEnrolled] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [gstAmount, setGstAmount] = useState(0);
+  const [totalPrice, setTotalPrice] = useState(0);
 
   const loadCourseData = useCallback(async () => {
     try {
@@ -70,8 +73,23 @@ export default function CourseDetailPage({ params }: { params: Promise<{ id: str
       // Get pricing from Moodle custom fields
       const cost = courseData.cost || '0';
       const currency = courseData.currency || 'INR';
+      const gstRate = courseData.gst ? parseInt(String(courseData.gst)) : 0;
       
-      console.log('💰 Course pricing:', { cost, currency });
+      console.log('💰 Course pricing:', { cost, currency, gst: gstRate });
+
+      // Calculate GST amount and total price
+      const basePrice = parseFloat(cost);
+      const calculatedGst = (basePrice * gstRate) / 100;
+      const calculatedTotal = basePrice + calculatedGst;
+      
+      setGstAmount(calculatedGst);
+      setTotalPrice(calculatedTotal);
+      console.log('💱 GST Calculation:', { 
+        basePrice, 
+        gstRate: `${gstRate}%`, 
+        gstAmount: calculatedGst, 
+        totalPrice: calculatedTotal 
+      });
 
       // Check enrollment status
       let isEnrolled = false;
@@ -95,6 +113,7 @@ export default function CourseDetailPage({ params }: { params: Promise<{ id: str
         ...courseData,
         cost,
         currency,
+        gst: gstRate,
         enrolled: isEnrolled
       });
       setEnrolled(isEnrolled);
@@ -193,13 +212,32 @@ export default function CourseDetailPage({ params }: { params: Promise<{ id: str
             {/* Price and Add to Cart */}
             <div className="md:col-span-1">
               <div className="bg-gradient-to-br from-blue-50 to-indigo-50 rounded-lg p-6 border border-blue-100">
-                <div className="mb-6">
-                  <p className="text-sm text-gray-600 mb-2">Price</p>
-                  <p className="text-3xl font-bold text-gray-900">
-                    {course.cost && parseFloat(course.cost) > 0
-                      ? `${course.currency || 'INR'} ${course.cost}`
-                      : 'FREE'}
-                  </p>
+                <div className="mb-6 space-y-3">
+                  <div>
+                    <p className="text-sm text-gray-600 mb-1">Base Price</p>
+                    <p className="text-2xl font-bold text-gray-900">
+                      {course.cost && parseFloat(course.cost) > 0
+                        ? `${course.currency || 'INR'} ${course.cost}`
+                        : 'FREE'}
+                    </p>
+                  </div>
+                  
+                  {course.gst && parseInt(String(course.gst)) > 0 && (
+                    <>
+                      <div className="pt-2 border-t border-blue-200">
+                        <p className="text-sm text-gray-600 mb-1">GST ({course.gst}%)</p>
+                        <p className="text-lg font-semibold text-gray-900">
+                          {course.currency || 'INR'} {gstAmount.toFixed(2)}
+                        </p>
+                      </div>
+                      <div className="bg-white rounded p-3">
+                        <p className="text-sm text-gray-600 mb-1">Total Amount</p>
+                        <p className="text-2xl font-bold text-green-600">
+                          {course.currency || 'INR'} {totalPrice.toFixed(2)}
+                        </p>
+                      </div>
+                    </>
+                  )}
                 </div>
 
                 {enrolled ? (
@@ -256,9 +294,9 @@ export default function CourseDetailPage({ params }: { params: Promise<{ id: str
                     className="w-full px-6 py-3 bg-gradient-to-r from-orange-500 to-orange-600 hover:from-orange-600 hover:to-orange-700 text-white rounded-lg font-bold transition-all duration-300 shadow-md hover:shadow-lg flex items-center justify-center gap-2"
                   >
                     <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 3h2l.4 2M7 13h10l4-8H5.4M7 13L5.4 5M7 13l-2.293 2.293c-.63.63-.184 1.707.707 1.707H17m0 0a2 2 0 100 4 2 2 0 000-4zm-8 2a2 2 0 11-4 0 2 2 0 014 0z" />
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1" />
                     </svg>
-                    Add to Cart
+                    Buy Now
                   </button>
                 )}
               </div>

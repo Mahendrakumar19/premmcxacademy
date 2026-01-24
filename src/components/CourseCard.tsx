@@ -12,6 +12,7 @@ type Props = {
   shortname?: string;
   cost?: string;
   currency?: string;
+  gst?: string | number;
   imageurl?: string;
   courseimage?: string;
 };
@@ -21,6 +22,7 @@ export default function CourseCard({
   fullname,
   cost,
   currency = 'INR',
+  gst,
   imageurl,
   courseimage
 }: Props) {
@@ -37,6 +39,14 @@ export default function CourseCard({
       maximumFractionDigits: 0,
     }).format(numAmount);
   };
+
+  // Calculate final price based on GST
+  // GST = 0 means inclusive (show as-is)
+  // GST = 18 means exclusive (will be added in cart)
+  const basePrice = cost ? parseFloat(cost) : 0;
+  const gstRate = gst ? parseInt(String(gst)) : 0;
+  // For homepage, always show base price
+  const displayPrice = basePrice;
 
   const hasCost = cost && parseFloat(cost) > 0;
 
@@ -59,12 +69,13 @@ export default function CourseCard({
         return;
       }
 
-      // User is logged in - add to cart and go to checkout
+      // User is logged in - add to cart with base price and GST for calculation in cart
       addToCart({
         courseId: id,
         courseName: fullname,
-        cost: cost,
+        cost: String(basePrice.toFixed(2)),
         currency: currency,
+        gst: gstRate,
         thumbnailUrl: imageUrl,
       });
 
@@ -114,16 +125,18 @@ export default function CourseCard({
         {/* Pricing from Moodle */}
         <div className="mt-auto pt-2">
           {hasCost && (
-            <div className="flex items-baseline gap-2 mb-3 flex-wrap">
-              <span className="text-xl font-bold text-gray-900 dark:text-white">
-                {formatPrice(cost, currency)}
-              </span>
+            <div className="mb-3">
+              <div className="flex items-baseline gap-2 mb-3 flex-wrap">
+                <span className="text-xl font-bold text-gray-900 dark:text-white">
+                  {formatPrice(String(displayPrice), currency)}
+                </span>
+              </div>
             </div>
           )}
           
           {/* CTA Button */}
           <button className="w-full rounded-lg bg-linear-to-r from-orange-500 to-orange-600 px-4 py-2.5 text-sm font-semibold text-white transition-all hover:shadow-md">
-            {hasCost ? 'Pay & Enroll' : 'Start Learning'}
+            {hasCost ? 'Buy Now' : 'Start Learning'}
           </button>
         </div>
       </div>

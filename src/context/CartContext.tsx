@@ -7,6 +7,7 @@ export interface CartItem {
   courseName: string;
   cost: string;
   currency: string;
+  gst?: string | number;
   thumbnailUrl?: string;
 }
 

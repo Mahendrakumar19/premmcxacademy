@@ -270,6 +270,7 @@ export async function getAllCoursesWithEnrolment(token?: string) {
     const coursesWithEnrolment = await Promise.all(courses.map(async (course: any, index: number) => {
       let cost = null;
       let currency = 'INR';
+      let gst = 0;
       let requiresPayment = false;
       let displayPrice = null;
       
@@ -296,6 +297,22 @@ export async function getAllCoursesWithEnrolment(token?: string) {
           currencyVal = currencyVal.replace(/<[^>]*>/g, '').trim();
           if (currencyVal) currency = currencyVal;
           console.log(`💱 Found custom field currency for course ${course.id} (${course.fullname}): ${currency}`);
+        }
+
+        // GST custom field (0 or 18)
+        const gstField = course.customfields.find(
+          (field: any) => ['gst'].includes(String(field.shortname).toLowerCase()) || String(field.name).toLowerCase().includes('gst')
+        );
+        if (gstField && gstField.value !== undefined && gstField.value !== null) {
+          let gstVal = typeof gstField.value === 'object' ? gstField.value.text || String(gstField.value) : String(gstField.value);
+          // Strip HTML tags from custom field values
+          gstVal = gstVal.replace(/<[^>]*>/g, '').trim();
+          if (gstVal) {
+            gst = parseInt(gstVal) || 0;
+            // Ensure GST is only 0 or 18
+            if (gst !== 0 && gst !== 18) gst = 0;
+            console.log(`🧾 Found custom field GST for course ${course.id} (${course.fullname}): ${gst}%`);
+          }
         }
       }
       
@@ -366,6 +383,7 @@ export async function getAllCoursesWithEnrolment(token?: string) {
         ...course,
         cost,
         currency,
+        gst,
         requiresPayment,
         displayPrice,
         courseimage
@@ -393,6 +411,7 @@ export async function getCourseWithEnrolment(courseId: number, token?: string) {
 
     let cost = null;
     let currency = 'INR';
+    let gst = 0;
     let requiresPayment = false;
     let displayPrice = null;
 
@@ -420,6 +439,22 @@ export async function getCourseWithEnrolment(courseId: number, token?: string) {
         if (currencyVal) currency = currencyVal;
         console.log(`💱 Found custom field currency for course ${course.id} (${course.fullname}): ${currency}`);
       }
+
+      // GST custom field (0 or 18)
+      const gstField = course.customfields.find(
+        (field: any) => ['gst'].includes(String(field.shortname).toLowerCase()) || String(field.name).toLowerCase().includes('gst')
+      );
+      if (gstField && gstField.value !== undefined && gstField.value !== null) {
+        let gstVal = typeof gstField.value === 'object' ? gstField.value.text || String(gstField.value) : String(gstField.value);
+        // Strip HTML tags from custom field values
+        gstVal = gstVal.replace(/<[^>]*>/g, '').trim();
+        if (gstVal) {
+          gst = parseInt(gstVal) || 0;
+          // Ensure GST is only 0 or 18
+          if (gst !== 0 && gst !== 18) gst = 0;
+          console.log(`🧾 Found custom field GST for course ${course.id} (${course.fullname}): ${gst}%`);
+        }
+      }
     }
 
     // Get payment/enrolment info for the course
@@ -445,6 +480,7 @@ export async function getCourseWithEnrolment(courseId: number, token?: string) {
       ...course,
       cost,
       currency,
+      gst,
       requiresPayment,
       displayPrice,
     };

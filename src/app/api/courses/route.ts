@@ -99,6 +99,7 @@ export async function GET(request: Request) {
           displayPrice: displayPrice,
           price: actualPrice,
           currency: currency,
+          gst: course.gst || 0,
           courseimage: courseimage,
           overviewfiles: course.overviewfiles || [],
           requiresPayment: course.requiresPayment || (!isNaN(numericPrice) && numericPrice > 0) || false,

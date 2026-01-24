@@ -148,25 +148,48 @@ export default function CartPage() {
                   ))}
                 </div>
 
-                {/* Total */}
+                {/* Total - Calculate GST based on items in cart */}
                 <div className="mb-6">
-                  <div className="flex justify-between mb-2">
-                    <span className="text-gray-600 font-medium">Subtotal:</span>
-                    <span className="text-gray-900 font-semibold">₹{totalPrice.toLocaleString()}</span>
-                  </div>
-                  <div className="flex justify-between mb-2">
-                    <span className="text-gray-600 font-medium">SGST (9%):</span>
-                    <span className="text-gray-900 font-semibold">₹{Math.round(totalPrice * 0.09).toLocaleString()}</span>
-                  </div>
-                  <div className="flex justify-between mb-4">
-                    <span className="text-gray-600 font-medium">CGST (9%):</span>
-                    <span className="text-gray-900 font-semibold">₹{Math.round(totalPrice * 0.09).toLocaleString()}</span>
-                  </div>
-                  <div className="flex justify-between text-xl font-bold border-t border-gray-100 pt-4">
-                    <span className="text-gray-900 font-semibold">Total (incl. 18% GST):</span>
-                    <span className="text-indigo-600 font-bold">₹{Math.round(totalPrice * 1.18).toLocaleString()}</span>
-                  </div>
-                  <p className="text-xs text-gray-500 mt-2">*GST @ 18% (9% SGST + 9% CGST)</p>
+                  {(() => {
+                    let subtotal = 0;
+                    let totalGST = 0;
+
+                    items.forEach((item) => {
+                      const cost = parseFloat(item.cost || '0');
+                      const gstRate = item.gst ? parseInt(String(item.gst)) : 0;
+                      
+                      subtotal += cost;
+                      
+                      // Only add GST if gst = 18 (exclusive pricing)
+                      if (gstRate === 18) {
+                        totalGST += cost * 0.18;
+                      }
+                    });
+
+                    const finalTotal = subtotal + totalGST;
+
+                    return (
+                      <>
+                        <div className="flex justify-between mb-2">
+                          <span className="text-gray-600 font-medium">Subtotal:</span>
+                          <span className="text-gray-900 font-semibold">₹{subtotal.toLocaleString('en-IN', { maximumFractionDigits: 0 })}</span>
+                        </div>
+                        {totalGST > 0 && (
+                          <div className="flex justify-between mb-4">
+                            <span className="text-gray-600 font-medium">GST (18%):</span>
+                            <span className="text-gray-900 font-semibold">₹{Math.round(totalGST).toLocaleString('en-IN')}</span>
+                          </div>
+                        )}
+                        <div className="flex justify-between text-xl font-bold border-t border-gray-100 pt-4">
+                          <span className="text-gray-900 font-semibold">Total:</span>
+                          <span className="text-indigo-600 font-bold">₹{Math.round(finalTotal).toLocaleString('en-IN')}</span>
+                        </div>
+                        {totalGST > 0 && (
+                          <p className="text-xs text-gray-500 mt-2">*Includes GST @ 18%</p>
+                        )}
+                      </>
+                    );
+                  })()}
                 </div>
 
                 {/* Info Messages */}
