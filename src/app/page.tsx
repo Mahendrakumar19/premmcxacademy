@@ -399,7 +399,7 @@ export default function HomePage() {
             Join thousands of successful traders who have transformed their careers with PremMCX Academy
           </p>
           <a
-            href="https://forms.gle/YOUR_GOOGLE_FORM_LINK"
+            href="https://forms.gle/cXqeQARFR8GcPUHn7"
             target="_blank"
             rel="noopener noreferrer"
             className="inline-block px-8 py-4 bg-white text-indigo-600 rounded-xl font-semibold text-lg shadow-xl hover:shadow-2xl transform hover:-translate-y-1 transition-all duration-200"
