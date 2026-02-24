@@ -109,6 +109,134 @@ export default function ImageSlider({ images }: ImageSliderProps) {
             </div>
           </div>
         </div>
+
+        {/* Video Cards Section Below Slider */}
+        <div className="mt-16">
+          <h3 className="text-3xl font-bold text-gray-900 mb-2">Featured Learning Videos</h3>
+          <p className="text-gray-600 mb-8">Explore our most popular trading tutorials and market insights</p>
+          
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+            {/* Video Card 1 */}
+            <div className="group bg-white rounded-xl shadow-lg overflow-hidden hover:shadow-2xl transition-all duration-300 hover:-translate-y-2">
+              <div className="relative h-40 bg-gradient-to-br from-blue-600 to-indigo-600 overflow-hidden">
+                <img 
+                  src="/Green and Red Bold Modern Stock Market Tutorial YouTube Thumbnail.png" 
+                  alt="NIFTY Trading Basics"
+                  className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-300"
+                  onError={(e) => {
+                    e.currentTarget.style.display = 'none';
+                  }}
+                />
+                <div className="absolute inset-0 flex items-center justify-center bg-black/30 group-hover:bg-black/50 transition-all duration-300">
+                  <svg className="w-12 h-12 text-white opacity-80 group-hover:opacity-100 transition-opacity" fill="currentColor" viewBox="0 0 20 20">
+                    <path d="M6.3 2.841A1.5 1.5 0 004 4.11V15.89a1.5 1.5 0 002.3 1.269l9.344-5.89a1.5 1.5 0 000-2.538L6.3 2.84z" />
+                  </svg>
+                </div>
+                <div className="absolute top-3 right-3 bg-black/70 px-2 py-1 rounded text-white text-xs font-semibold">
+                  12:45
+                </div>
+              </div>
+              <div className="p-4">
+                <h4 className="font-bold text-gray-900 mb-2 line-clamp-2">NIFTY Trading Basics for Beginners</h4>
+                <p className="text-sm text-gray-600 mb-4 line-clamp-2">Learn the fundamentals of NIFTY index trading</p>
+                <div className="flex items-center justify-between">
+                  <span className="text-xs text-indigo-600 font-semibold">Beginner</span>
+                  <span className="text-xs text-gray-500">5.2K views</span>
+                </div>
+              </div>
+            </div>
+
+            {/* Video Card 2 */}
+            <div className="group bg-white rounded-xl shadow-lg overflow-hidden hover:shadow-2xl transition-all duration-300 hover:-translate-y-2">
+              <div className="relative h-40 bg-gradient-to-br from-purple-600 to-pink-600 overflow-hidden">
+                <img 
+                  src="/Green and Red Bold Modern Stock Market Tutorial YouTube Thumbnail (320 x 190 px).png" 
+                  alt="MCX Gold Trading"
+                  className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-300"
+                  onError={(e) => {
+                    e.currentTarget.style.display = 'none';
+                  }}
+                />
+                <div className="absolute inset-0 flex items-center justify-center bg-black/30 group-hover:bg-black/50 transition-all duration-300">
+                  <svg className="w-12 h-12 text-white opacity-80 group-hover:opacity-100 transition-opacity" fill="currentColor" viewBox="0 0 20 20">
+                    <path d="M6.3 2.841A1.5 1.5 0 004 4.11V15.89a1.5 1.5 0 002.3 1.269l9.344-5.89a1.5 1.5 0 000-2.538L6.3 2.84z" />
+                  </svg>
+                </div>
+                <div className="absolute top-3 right-3 bg-black/70 px-2 py-1 rounded text-white text-xs font-semibold">
+                  18:30
+                </div>
+              </div>
+              <div className="p-4">
+                <h4 className="font-bold text-gray-900 mb-2 line-clamp-2">MCX Gold Trading Strategy</h4>
+                <p className="text-sm text-gray-600 mb-4 line-clamp-2">Advanced strategies for commodity trading</p>
+                <div className="flex items-center justify-between">
+                  <span className="text-xs text-indigo-600 font-semibold">Intermediate</span>
+                  <span className="text-xs text-gray-500">8.7K views</span>
+                </div>
+              </div>
+            </div>
+
+            {/* Video Card 3 */}
+            <div className="group bg-white rounded-xl shadow-lg overflow-hidden hover:shadow-2xl transition-all duration-300 hover:-translate-y-2">
+              <div className="relative h-40 bg-gradient-to-br from-indigo-600 to-blue-600 overflow-hidden">
+                <img 
+                  src="/Green and Red Bold Modern Stock Market Tutorial YouTube Thumbnail(1).png" 
+                  alt="Options Trading"
+                  className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-300"
+                  onError={(e) => {
+                    e.currentTarget.style.display = 'none';
+                  }}
+                />
+                <div className="absolute inset-0 flex items-center justify-center bg-black/30 group-hover:bg-black/50 transition-all duration-300">
+                  <svg className="w-12 h-12 text-white opacity-80 group-hover:opacity-100 transition-opacity" fill="currentColor" viewBox="0 0 20 20">
+                    <path d="M6.3 2.841A1.5 1.5 0 004 4.11V15.89a1.5 1.5 0 002.3 1.269l9.344-5.89a1.5 1.5 0 000-2.538L6.3 2.84z" />
+                  </svg>
+                </div>
+                <div className="absolute top-3 right-3 bg-black/70 px-2 py-1 rounded text-white text-xs font-semibold">
+                  22:15
+                </div>
+              </div>
+              <div className="p-4">
+                <h4 className="font-bold text-gray-900 mb-2 line-clamp-2">Options Chain Strategy Breakdown</h4>
+                <p className="text-sm text-gray-600 mb-4 line-clamp-2">Master option chain analysis and strategies</p>
+                <div className="flex items-center justify-between">
+                  <span className="text-xs text-indigo-600 font-semibold">Advanced</span>
+                  <span className="text-xs text-gray-500">12.3K views</span>
+                </div>
+              </div>
+            </div>
+
+            {/* Video Card 4 */}
+            <div className="group bg-white rounded-xl shadow-lg overflow-hidden hover:shadow-2xl transition-all duration-300 hover:-translate-y-2">
+              <div className="relative h-40 bg-gradient-to-br from-pink-600 to-purple-600 overflow-hidden">
+                <img 
+                  src="/Green and Red Bold Modern Stock Market Tutorial YouTube Thumbnail.png" 
+                  alt="Intraday Trading"
+                  className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-300"
+                  onError={(e) => {
+                    e.currentTarget.style.display = 'none';
+                  }}
+                />
+                <div className="absolute inset-0 flex items-center justify-center bg-black/30 group-hover:bg-black/50 transition-all duration-300">
+                  <svg className="w-12 h-12 text-white opacity-80 group-hover:opacity-100 transition-opacity" fill="currentColor" viewBox="0 0 20 20">
+                    <path d="M6.3 2.841A1.5 1.5 0 004 4.11V15.89a1.5 1.5 0 002.3 1.269l9.344-5.89a1.5 1.5 0 000-2.538L6.3 2.84z" />
+                  </svg>
+                </div>
+                <div className="absolute top-3 right-3 bg-black/70 px-2 py-1 rounded text-white text-xs font-semibold">
+                  15:42
+                </div>
+              </div>
+              <div className="p-4">
+                <h4 className="font-bold text-gray-900 mb-2 line-clamp-2">Intraday Price Action Trading</h4>
+                <p className="text-sm text-gray-600 mb-4 line-clamp-2">Real-time price action trading techniques</p>
+                <div className="flex items-center justify-between">
+                  <span className="text-xs text-indigo-600 font-semibold">Intermediate</span>
+                  <span className="text-xs text-gray-500">9.1K views</span>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
       </div>
     </section>
   );
