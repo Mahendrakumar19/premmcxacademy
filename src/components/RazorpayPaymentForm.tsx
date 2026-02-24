@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useSession } from 'next-auth/react';
 import Script from 'next/script';
 
@@ -29,10 +29,19 @@ export default function RazorpayPaymentForm({
   const { data: session } = useSession();
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [scriptLoaded, setScriptLoaded] = useState(false);
 
   // GST calculation (18% = 9% SGST + 9% CGST)
   const gstAmount = Math.round(totalAmount * 0.18);
   const finalAmount = totalAmount + gstAmount;
+
+  // Check if Razorpay key is configured
+  useEffect(() => {
+    if (!process.env.NEXT_PUBLIC_RAZORPAY_KEY_ID) {
+      setError('Razorpay key is not configured. Please contact support.');
+      console.warn('⚠️ NEXT_PUBLIC_RAZORPAY_KEY_ID environment variable is missing');
+    }
+  }, []);
 
   const handlePayment = async () => {
     if (!session?.user?.email) {
@@ -41,10 +50,30 @@ export default function RazorpayPaymentForm({
       return;
     }
 
+    if (!process.env.NEXT_PUBLIC_RAZORPAY_KEY_ID) {
+      setError('Payment gateway is not configured. Please contact support.');
+      onError('Payment gateway is not configured');
+      return;
+    }
+
+    if (!scriptLoaded) {
+      setError('Payment gateway is loading. Please wait and try again.');
+      return;
+    }
+
+    if (items.length === 0) {
+      setError('No courses selected');
+      onError('No courses selected');
+      return;
+    }
+
     setLoading(true);
     setError(null);
 
     try {
+      console.log('📋 Initiating payment with items:', items);
+      console.log('💰 Total Amount:', finalAmount);
+      
       // Create order on backend
       const orderResponse = await fetch('/api/payment/create-order', {
         method: 'POST',
@@ -61,10 +90,12 @@ export default function RazorpayPaymentForm({
 
       if (!orderResponse.ok) {
         const errorData = await orderResponse.json();
+        console.error('❌ Order creation failed:', errorData);
         throw new Error(errorData.error || 'Failed to create order');
       }
 
       const orderData = await orderResponse.json();
+      console.log('✅ Order created successfully:', orderData.id);
 
       // Initialize Razorpay payment
       const options = {
@@ -147,10 +178,15 @@ export default function RazorpayPaymentForm({
         },
       };
 
+      if (!window.Razorpay) {
+        throw new Error('Razorpay SDK failed to load. Please refresh and try again.');
+      }
+
       const rzp = new window.Razorpay(options);
       rzp.open();
     } catch (err) {
       const message = err instanceof Error ? err.message : 'Payment failed. Please try again.';
+      console.error('❌ Payment error:', message);
       setError(message);
       onError(message);
       setLoading(false);
@@ -159,7 +195,18 @@ export default function RazorpayPaymentForm({
 
   return (
     <>
-      <Script src="https://checkout.razorpay.com/v1/checkout.js" strategy="lazyOnload" />
+      <Script 
+        src="https://checkout.razorpay.com/v1/checkout.js" 
+        strategy="lazyOnload"
+        onLoad={() => {
+          console.log('✅ Razorpay SDK loaded');
+          setScriptLoaded(true);
+        }}
+        onError={() => {
+          console.error('❌ Failed to load Razorpay SDK');
+          setError('Failed to load payment gateway. Please refresh the page.');
+        }}
+      />
 
       <div className="bg-white rounded-lg shadow-lg p-8">
         <h2 className="text-2xl font-bold text-gray-900 mb-6">Payment Details</h2>
@@ -193,7 +240,7 @@ export default function RazorpayPaymentForm({
         {/* Razorpay Button */}
         <button
           onClick={handlePayment}
-          disabled={loading || isProcessing || totalAmount === 0}
+          disabled={loading || isProcessing || totalAmount === 0 || !scriptLoaded}
           className="w-full px-6 py-4 bg-blue-600 text-white rounded-lg font-bold text-lg hover:bg-blue-700 transition disabled:bg-gray-400 disabled:cursor-not-allowed flex items-center justify-center gap-2"
         >
           {loading ? (
@@ -204,6 +251,8 @@ export default function RazorpayPaymentForm({
               </svg>
               Processing...
             </>
+          ) : !scriptLoaded ? (
+            'Loading Payment Gateway...'
           ) : totalAmount === 0 ? (
             'Free Enrollment'
           ) : (
