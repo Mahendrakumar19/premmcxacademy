@@ -15,6 +15,11 @@ export const authOptions: NextAuthOptions = {
           throw new Error("Please enter username and password");
         }
 
+        const normalizedUsername = credentials.username.trim();
+        if (!/^[a-z0-9_]+$/.test(normalizedUsername)) {
+          throw new Error("Username must contain only lowercase letters, numbers, and underscores");
+        }
+
         try {
           // Authenticate with Moodle
           const response = await fetch(
@@ -25,7 +30,7 @@ export const authOptions: NextAuthOptions = {
                 "Content-Type": "application/x-www-form-urlencoded",
               },
               body: new URLSearchParams({
-                username: credentials.username,
+                username: normalizedUsername,
                 password: credentials.password,
                 service: "moodle_mobile_app",
               }),
@@ -51,7 +56,7 @@ export const authOptions: NextAuthOptions = {
               // Hardcoded admin check - if username is "admin", assign admin role
               let userRole: 'admin' | 'teacher' | 'student';
               
-              if (credentials.username.toLowerCase() === 'admin') {
+              if (normalizedUsername === 'admin') {
                 console.log('🔐 Hardcoded admin login detected');
                 userRole = 'admin';
               } else {

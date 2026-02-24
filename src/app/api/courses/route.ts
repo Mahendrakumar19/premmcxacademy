@@ -6,17 +6,27 @@ export async function GET(request: Request) {
     // Use the MOODLE_TOKEN from environment variables
     const token = process.env.MOODLE_TOKEN;
 
-    if (!token) {
-      return NextResponse.json(
-        { error: 'Moodle token not configured' },
-        { status: 500 }
-      );
+    if (!token || !token.trim()) {
+      console.error('❌ MOODLE_TOKEN not configured or empty');
+      console.log('ℹ️ Returning empty courses array as Moodle is not configured');
+      
+      // Return empty array instead of error so frontend doesn't break
+      return NextResponse.json([], { status: 200 });
     }
 
     console.log('📚 API: Fetching courses from Moodle...');
     
     // Fetch courses with enrollment info and pricing from Moodle
-    const courses = await getAllCoursesWithEnrolment(token);
+    let courses;
+    try {
+      courses = await getAllCoursesWithEnrolment(token);
+    } catch (fetchError: any) {
+      console.error('❌ Error fetching courses from Moodle:', fetchError);
+      console.log('ℹ️ Check if MOODLE_URL and MOODLE_TOKEN are correctly configured');
+      
+      // Return empty array on error so page doesn't crash
+      return NextResponse.json([], { status: 200 });
+    }
     
     console.log(`📊 API: Received ${courses.length} courses from moodle-api`);
 
@@ -121,11 +131,10 @@ export async function GET(request: Request) {
 
     return NextResponse.json(transformedCourses);
   } catch (error: any) {
-    console.error('❌ Error fetching courses:', error);
-    return NextResponse.json(
-      { error: 'Failed to fetch courses', details: error.message },
-      { status: 500 }
-    );
+    console.error('❌ Error in courses API route:', error);
+    
+    // Return empty array so frontend doesn't crash
+    return NextResponse.json([], { status: 200 });
   }
 }
 

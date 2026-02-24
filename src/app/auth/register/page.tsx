@@ -27,6 +27,13 @@ export default function RegisterPage() {
     setError("");
     setSuccess(false);
 
+    const normalizedUsername = formData.username.trim();
+
+    if (!/^[a-z0-9_]+$/.test(normalizedUsername)) {
+      setError("Username must contain only lowercase letters, numbers, and underscores");
+      return;
+    }
+
     // Validation
     if (formData.password !== formData.confirmPassword) {
       setError("Passwords do not match");
@@ -50,7 +57,7 @@ export default function RegisterPage() {
           firstname: formData.firstname,
           lastname: formData.lastname,
           email: formData.email,
-          username: formData.username,
+          username: normalizedUsername,
           password: formData.password,
         }),
       });
@@ -62,7 +69,7 @@ export default function RegisterPage() {
         
         // Auto-login after successful registration
         const loginResult = await signIn("credentials", {
-          username: formData.username,
+          username: normalizedUsername,
           password: formData.password,
           redirect: false,
         });
@@ -256,14 +263,14 @@ export default function RegisterPage() {
                 required
                 value={formData.username}
                 onChange={(e) =>
-                  setFormData({ ...formData, username: e.target.value })
+                  setFormData({ ...formData, username: e.target.value.toLowerCase() })
                 }
                 className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-orange-500 outline-none transition-all"
                 placeholder="johndoe"
                 disabled={loading}
               />
               <p className="mt-1 text-xs text-gray-500">
-                Choose a unique username (letters, numbers, underscore only)
+                Choose a unique username (lowercase letters, numbers, underscore only)
               </p>
             </div>
 

@@ -33,13 +33,20 @@ function LoginForm() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError("");
+
+    const normalizedUsername = formData.username.trim();
+    if (!/^[a-z0-9_]+$/.test(normalizedUsername)) {
+      setError("Username must contain only lowercase letters, numbers, and underscores");
+      return;
+    }
+
     setLoading(true);
 
-    console.log("🔑 Login attempt with username:", formData.username);
+    console.log("🔑 Login attempt with username:", normalizedUsername);
 
     try {
       const result = await signIn("credentials", {
-        username: formData.username,
+        username: normalizedUsername,
         password: formData.password,
         redirect: false,
       });
@@ -139,12 +146,15 @@ function LoginForm() {
                 required
                 value={formData.username}
                 onChange={(e) =>
-                  setFormData({ ...formData, username: e.target.value })
+                  setFormData({ ...formData, username: e.target.value.toLowerCase() })
                 }
                 className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-orange-500 outline-none transition-all"
                 placeholder="Enter your username"
                 disabled={loading}
               />
+              <p className="mt-1 text-xs text-gray-500">
+                Use your lowercase username only
+              </p>
             </div>
 
             <div>

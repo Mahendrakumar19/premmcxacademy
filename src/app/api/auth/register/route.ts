@@ -13,6 +13,14 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    const normalizedUsername = String(username).trim();
+    if (!/^[a-z0-9_]+$/.test(normalizedUsername)) {
+      return NextResponse.json(
+        { error: "Username must contain only lowercase letters, numbers, and underscores" },
+        { status: 400 }
+      );
+    }
+
     // Create user in Moodle
     const moodleUrl = process.env.MOODLE_URL;
     const moodleToken = process.env.MOODLE_CREATE_USER_TOKEN;
@@ -28,7 +36,7 @@ export async function POST(request: NextRequest) {
           wstoken: moodleToken!,
           wsfunction: "core_user_create_users",
           moodlewsrestformat: "json",
-          "users[0][username]": username,
+          "users[0][username]": normalizedUsername,
           "users[0][password]": password,
           "users[0][firstname]": firstname,
           "users[0][lastname]": lastname,
